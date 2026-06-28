@@ -1,18 +1,12 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiResult,
   createTransaction,
+  listTransactions,
   validateTransaction
 } from "./api";
+import { RecentEvent, toRecentEvent } from "./history";
 import { TransactionFormState, toTransactionPayload } from "./transaction";
-
-type RecentEvent = {
-  id: string;
-  institution: string;
-  amount: string;
-  status: "valid" | "created" | "blocked";
-  time: string;
-};
 
 const initialForm: TransactionFormState = {
   id: "txn-2026-0001",
@@ -24,19 +18,33 @@ const initialForm: TransactionFormState = {
   description: "Road maintenance payment"
 };
 
-const initialEvents: RecentEvent[] = [
-  { id: "txn-2026-0001", institution: "minfin", amount: "USD 1,250.00", status: "valid", time: "Now" },
-  { id: "txn-2026-0000", institution: "transport", amount: "USD 980.00", status: "created", time: "12m" },
-  { id: "txn-2025-0942", institution: "health", amount: "USD 4,500.00", status: "blocked", time: "42m" }
-];
-
 export function App() {
   const [form, setForm] = useState<TransactionFormState>(initialForm);
   const [result, setResult] = useState<ApiResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [events, setEvents] = useState<RecentEvent[]>(initialEvents);
+  const [events, setEvents] = useState<RecentEvent[]>([]);
+  const [historyStatus, setHistoryStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [historyError, setHistoryError] = useState("");
 
   const transaction = useMemo(() => toTransactionPayload(form), [form]);
+
+  const loadHistory = useCallback(async () => {
+    setHistoryStatus("loading");
+    const response = await listTransactions({ limit: 5 });
+    if (response.ok) {
+      setEvents(response.transactions.map(toRecentEvent));
+      setHistoryStatus("ready");
+      setHistoryError("");
+      return;
+    }
+
+    setHistoryStatus("error");
+    setHistoryError(response.error);
+  }, []);
+
+  useEffect(() => {
+    void loadHistory();
+  }, [loadHistory]);
 
   async function submitTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -51,19 +59,9 @@ export function App() {
         : await createTransaction(transaction);
 
     setResult(response);
-    setEvents((current) => [
-      {
-        id: transaction.id || "unsaved",
-        institution: transaction.institutionId || "unknown",
-        amount: `${transaction.currency || "USD"} ${(transaction.amountMinor / 100).toLocaleString(undefined, {
-          minimumFractionDigits: 2,
-          maximumFractionDigits: 2
-        })}`,
-        status: response.ok ? (action === "create" ? "created" : "valid") : "blocked",
-        time: "Now"
-      },
-      ...current.slice(0, 4)
-    ]);
+    if (response.ok && action === "create") {
+      setEvents((current) => [toRecentEvent(transaction), ...current.filter((event) => event.id !== transaction.id)].slice(0, 5));
+    }
     setIsSubmitting(false);
   }
 
@@ -145,30 +143,22 @@ export function App() {
 
             <div className="table-heading">
               <h2>Recent activity</h2>
-              <span>{events.length} records</span>
+              <button className="text-button" type="button" onClick={() => void loadHistory()}>
+                Refresh
+              </button>
             </div>
             <table>
               <thead>
                 <tr>
                   <th>Transaction</th>
                   <th>Institution</th>
+                  <th>Date</th>
                   <th>Amount</th>
                   <th>Status</th>
-                  <th>Age</th>
                 </tr>
               </thead>
               <tbody>
-                {events.map((event, index) => (
-                  <tr key={`${event.id}-${event.time}-${index}`}>
-                    <td>{event.id}</td>
-                    <td>{event.institution}</td>
-                    <td>{event.amount}</td>
-                    <td>
-                      <span className={`row-status ${event.status}`}>{event.status}</span>
-                    </td>
-                    <td>{event.time}</td>
-                  </tr>
-                ))}
+                <HistoryRows events={events} status={historyStatus} error={historyError} />
               </tbody>
             </table>
           </section>
@@ -176,6 +166,48 @@ export function App() {
       </main>
     </div>
   );
+}
+
+function HistoryRows(props: {
+  events: RecentEvent[];
+  status: "loading" | "ready" | "error";
+  error: string;
+}) {
+  if (props.status === "loading") {
+    return (
+      <tr>
+        <td colSpan={5}>Loading transaction history...</td>
+      </tr>
+    );
+  }
+
+  if (props.status === "error") {
+    return (
+      <tr>
+        <td colSpan={5}>{props.error}</td>
+      </tr>
+    );
+  }
+
+  if (props.events.length === 0) {
+    return (
+      <tr>
+        <td colSpan={5}>No transactions found.</td>
+      </tr>
+    );
+  }
+
+  return props.events.map((event) => (
+    <tr key={`${event.id}-${event.date}`}>
+      <td>{event.id}</td>
+      <td>{event.institution}</td>
+      <td>{event.date}</td>
+      <td>{event.amount}</td>
+      <td>
+        <span className={`row-status ${event.status}`}>{event.status}</span>
+      </td>
+    </tr>
+  ));
 }
 
 function Field(props: {

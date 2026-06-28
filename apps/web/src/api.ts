@@ -1,3 +1,5 @@
+import { buildTransactionsPath } from "./history";
+
 export type TreasuryTransaction = {
   id: string;
   institutionId: string;
@@ -8,11 +10,74 @@ export type TreasuryTransaction = {
   transactionDate: string;
 };
 
+export type TransactionListFilter = {
+  institutionId?: string;
+  fiscalYear?: number;
+  limit?: number;
+};
+
 export type ApiResult =
   | { ok: true; status: number; data?: unknown }
   | { ok: false; status: number; error: string };
 
+export type TransactionListResult =
+  | { ok: true; transactions: TreasuryTransaction[] }
+  | { ok: false; error: string };
+
 const apiBaseUrl = import.meta.env.VITE_CORE_API_URL;
+
+const simulatedTransactions: TreasuryTransaction[] = [
+  {
+    id: "txn-2026-0001",
+    institutionId: "minfin",
+    fiscalYear: 2026,
+    amountMinor: 125000,
+    currency: "USD",
+    description: "Road maintenance payment",
+    transactionDate: "2026-06-28"
+  },
+  {
+    id: "txn-2026-0000",
+    institutionId: "transport",
+    fiscalYear: 2026,
+    amountMinor: 98000,
+    currency: "USD",
+    description: "Bridge inspection payment",
+    transactionDate: "2026-06-27"
+  },
+  {
+    id: "txn-2025-0942",
+    institutionId: "health",
+    fiscalYear: 2025,
+    amountMinor: 450000,
+    currency: "USD",
+    description: "Clinic equipment procurement",
+    transactionDate: "2025-12-18"
+  }
+];
+
+export async function listTransactions(filter: TransactionListFilter = { limit: 5 }): Promise<TransactionListResult> {
+  if (!apiBaseUrl) {
+    return { ok: true, transactions: filterSimulatedTransactions(filter) };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${buildTransactionsPath(filter)}`);
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return {
+        ok: false,
+        error: body?.error ?? `Request failed with status ${response.status}`
+      };
+    }
+
+    const body = (await response.json()) as { transactions?: TreasuryTransaction[] };
+    return { ok: true, transactions: body.transactions ?? [] };
+  } catch {
+    return { ok: false, error: "Core API is not reachable" };
+  }
+}
 
 export async function validateTransaction(transaction: TreasuryTransaction): Promise<ApiResult> {
   if (!apiBaseUrl) {
@@ -62,6 +127,13 @@ async function postTransaction(path: string, transaction: TreasuryTransaction): 
       error: "Core API is not reachable"
     };
   }
+}
+
+function filterSimulatedTransactions(filter: TransactionListFilter): TreasuryTransaction[] {
+  return simulatedTransactions
+    .filter((transaction) => !filter.institutionId || transaction.institutionId === filter.institutionId)
+    .filter((transaction) => !filter.fiscalYear || transaction.fiscalYear === filter.fiscalYear)
+    .slice(0, filter.limit ?? 5);
 }
 
 function simulateValidation(transaction: TreasuryTransaction): ApiResult {
