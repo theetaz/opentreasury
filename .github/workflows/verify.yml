@@ -39,7 +39,11 @@ jobs:
       - name: Set up pnpm
         uses: pnpm/action-setup@v4
         with:
+          version: 10.34.4
           run_install: false
+
+      - name: Install web workspace dependencies
+        run: pnpm install --filter @opentreasury/web --filter @opentreasury/types --filter @opentreasury/ui --frozen-lockfile
 
       - name: Verify
         run: make verify
