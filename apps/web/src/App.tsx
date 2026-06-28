@@ -3,10 +3,13 @@ import {
   ApiResult,
   checkCoreApiHealth,
   createTransaction,
+  listAuditEvents,
   listTransactions,
   validateTransaction
 } from "./api";
-import type { HealthCheckResult, TransactionListFilter } from "./api";
+import type { AuditEvent, AuditEventListFilter, HealthCheckResult, TransactionListFilter } from "./api";
+import { prependAuditRow, toAuditRow } from "./audit";
+import type { AuditRow } from "./audit";
 import { toHealthDisplay } from "./health";
 import {
   HistoryFilterForm,
@@ -41,6 +44,9 @@ export function App() {
   const [events, setEvents] = useState<RecentEvent[]>([]);
   const [historyStatus, setHistoryStatus] = useState<"loading" | "ready" | "error">("loading");
   const [historyError, setHistoryError] = useState("");
+  const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
+  const [auditStatus, setAuditStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [auditError, setAuditError] = useState("");
   const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(null);
 
   const transaction = useMemo(() => toTransactionPayload(form), [form]);
@@ -65,9 +71,27 @@ export function App() {
     setHealthResult(await checkCoreApiHealth());
   }, []);
 
+  const loadAuditTrail = useCallback(async (filter: AuditEventListFilter = { limit: 5 }) => {
+    setAuditStatus("loading");
+    const response = await listAuditEvents(filter);
+    if (response.ok) {
+      setAuditRows(response.events.map(toAuditRow));
+      setAuditStatus("ready");
+      setAuditError("");
+      return;
+    }
+
+    setAuditStatus("error");
+    setAuditError(response.error);
+  }, []);
+
   useEffect(() => {
     void loadHistory(appliedHistoryFilter);
   }, [appliedHistoryFilter, loadHistory]);
+
+  useEffect(() => {
+    void loadAuditTrail();
+  }, [loadAuditTrail]);
 
   useEffect(() => {
     void refreshHealth();
@@ -93,6 +117,8 @@ export function App() {
     setResult(response);
     if (response.ok && action === "create") {
       setEvents((current) => [toRecentEvent(transaction), ...current.filter((event) => event.id !== transaction.id)].slice(0, 5));
+      const auditRow = toAuditRow(toCreatedAuditEvent(transaction, new Date().toISOString()));
+      setAuditRows((current) => prependAuditRow(current, auditRow));
     }
     setIsSubmitting(false);
   }
@@ -205,7 +231,7 @@ export function App() {
                 Apply
               </button>
             </form>
-            <table>
+            <table className="activity-table">
               <thead>
                 <tr>
                   <th>Transaction</th>
@@ -217,6 +243,27 @@ export function App() {
               </thead>
               <tbody>
                 <HistoryRows events={events} status={historyStatus} error={historyError} />
+              </tbody>
+            </table>
+
+            <div className="table-heading audit-heading" id="audit-trail">
+              <h2>Audit trail</h2>
+              <button className="text-button" type="button" onClick={() => void loadAuditTrail()}>
+                Refresh
+              </button>
+            </div>
+            <table className="audit-table">
+              <thead>
+                <tr>
+                  <th>Event</th>
+                  <th>Transaction</th>
+                  <th>Institution</th>
+                  <th>Occurred</th>
+                  <th>Summary</th>
+                </tr>
+              </thead>
+              <tbody>
+                <AuditRows rows={auditRows} status={auditStatus} error={auditError} />
               </tbody>
             </table>
           </section>
@@ -268,6 +315,46 @@ function HistoryRows(props: {
   ));
 }
 
+function AuditRows(props: {
+  rows: AuditRow[];
+  status: "loading" | "ready" | "error";
+  error: string;
+}) {
+  if (props.status === "loading") {
+    return (
+      <tr>
+        <td colSpan={5}>Loading audit trail...</td>
+      </tr>
+    );
+  }
+
+  if (props.status === "error") {
+    return (
+      <tr>
+        <td colSpan={5}>{props.error}</td>
+      </tr>
+    );
+  }
+
+  if (props.rows.length === 0) {
+    return (
+      <tr>
+        <td colSpan={5}>No audit events found.</td>
+      </tr>
+    );
+  }
+
+  return props.rows.map((row) => (
+    <tr key={row.id}>
+      <td>{row.eventType}</td>
+      <td>{row.transactionId}</td>
+      <td>{row.institution}</td>
+      <td>{row.occurredAt}</td>
+      <td>{row.summary}</td>
+    </tr>
+  ));
+}
+
 function Field(props: {
   label: string;
   value: string;
@@ -311,4 +398,15 @@ function formatResult(result: ApiResult | null) {
   }
 
   return JSON.stringify(result, null, 2);
+}
+
+function toCreatedAuditEvent(transaction: ReturnType<typeof toTransactionPayload>, occurredAt: string): AuditEvent {
+  return {
+    id: `audit-${transaction.id}-created`,
+    eventType: "TRANSACTION_CREATED",
+    transactionId: transaction.id,
+    institutionId: transaction.institutionId,
+    occurredAt,
+    summary: `Transaction ${transaction.id} was created.`
+  };
 }
