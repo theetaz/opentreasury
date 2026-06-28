@@ -33,6 +33,48 @@ paths:
         "400":
           $ref: "#/components/responses/BadRequest"
   /v1/transactions:
+    get:
+      operationId: listTransactions
+      summary: List treasury transactions
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Filter transactions by institution identifier.
+        - name: fiscalYear
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Filter transactions by fiscal year.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum number of transactions to return.
+      responses:
+        "200":
+          description: Matching transactions ordered by most recent transaction date.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListTransactionsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Transaction persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
     post:
       operationId: createTransaction
       summary: Create a treasury transaction
@@ -122,6 +164,15 @@ components:
       properties:
         id:
           type: string
+    ListTransactionsResponse:
+      type: object
+      required:
+        - transactions
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TreasuryTransaction"
     ErrorResponse:
       type: object
       required:

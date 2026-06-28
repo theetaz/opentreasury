@@ -19,5 +19,6 @@ func TestOpenAPIContractDocumentsCoreEndpoints(t *testing.T) {
 	require.NoError(t, document.Validate(context.Background()))
 	require.NotNil(t, document.Paths.Find("/healthz").Get)
 	require.NotNil(t, document.Paths.Find("/v1/transactions/validate").Post)
+	require.NotNil(t, document.Paths.Find("/v1/transactions").Get)
 	require.NotNil(t, document.Paths.Find("/v1/transactions").Post)
 }

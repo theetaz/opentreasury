@@ -85,10 +85,17 @@ func TestCreateTransactionEndpointRequiresRepository(t *testing.T) {
 }
 
 type recordingTransactionRepository struct {
-	saved []treasury.Transaction
+	saved        []treasury.Transaction
+	transactions []treasury.Transaction
+	filter       treasury.ListTransactionsFilter
 }
 
 func (repository *recordingTransactionRepository) Save(ctx context.Context, tx treasury.Transaction) error {
 	repository.saved = append(repository.saved, tx)
 	return nil
+}
+
+func (repository *recordingTransactionRepository) List(ctx context.Context, filter treasury.ListTransactionsFilter) ([]treasury.Transaction, error) {
+	repository.filter = filter
+	return repository.transactions, nil
 }
