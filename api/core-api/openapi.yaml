@@ -1,0 +1,131 @@
+openapi: 3.1.0
+info:
+  title: OpenTreasury Core API
+  version: 0.1.0
+  description: Core treasury transaction API for OpenTreasury.
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      operationId: getHealth
+      summary: Get service health
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /v1/transactions/validate:
+    post:
+      operationId: validateTransaction
+      summary: Validate a treasury transaction without persisting it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TreasuryTransaction"
+      responses:
+        "204":
+          description: Transaction is valid.
+        "400":
+          $ref: "#/components/responses/BadRequest"
+  /v1/transactions:
+    post:
+      operationId: createTransaction
+      summary: Create a treasury transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TreasuryTransaction"
+      responses:
+        "201":
+          description: Transaction was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTransactionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Transaction persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+components:
+  responses:
+    BadRequest:
+      description: Request payload is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+    TreasuryTransaction:
+      type: object
+      required:
+        - id
+        - institutionId
+        - fiscalYear
+        - amountMinor
+        - currency
+        - description
+        - transactionDate
+      properties:
+        id:
+          type: string
+          minLength: 1
+          example: txn-2026-0001
+        institutionId:
+          type: string
+          minLength: 1
+          example: minfin
+        fiscalYear:
+          type: integer
+          minimum: 1
+          example: 2026
+        amountMinor:
+          type: integer
+          minimum: 1
+          description: Monetary amount in the currency minor unit.
+          example: 125000
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          example: USD
+        description:
+          type: string
+          minLength: 1
+          example: Road maintenance payment
+        transactionDate:
+          type: string
+          format: date
+          example: "2026-06-28"
+    CreateTransactionResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string
