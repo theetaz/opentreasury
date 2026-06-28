@@ -22,3 +22,13 @@ func TestNewServerUsesConfiguredAddressAndRouter(t *testing.T) {
 		t.Fatalf("response.Code = %d, want %d", response.Code, http.StatusOK)
 	}
 }
+
+func TestLoadConfigUsesConfiguredAddress(t *testing.T) {
+	t.Setenv("OPENTREASURY_CORE_API_ADDR", "127.0.0.1:0")
+
+	cfg := loadConfig()
+
+	if cfg.addr != "127.0.0.1:0" {
+		t.Fatalf("cfg.addr = %q, want %q", cfg.addr, "127.0.0.1:0")
+	}
+}
