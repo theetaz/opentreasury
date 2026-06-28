@@ -71,6 +71,11 @@ func (config routerConfig) createTransaction(response http.ResponseWriter, reque
 		return
 	}
 
+	if config.transactionRepository == nil {
+		writeError(response, http.StatusServiceUnavailable, "transaction repository is not configured")
+		return
+	}
+
 	if err := config.transactionRepository.Save(request.Context(), tx); err != nil {
 		writeError(response, http.StatusInternalServerError, err.Error())
 		return
