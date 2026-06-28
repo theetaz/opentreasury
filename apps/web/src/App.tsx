@@ -1,11 +1,13 @@
 import { FormEvent, useCallback, useEffect, useMemo, useState } from "react";
 import {
   ApiResult,
+  checkCoreApiHealth,
   createTransaction,
   listTransactions,
   validateTransaction
 } from "./api";
-import type { TransactionListFilter } from "./api";
+import type { HealthCheckResult, TransactionListFilter } from "./api";
+import { toHealthDisplay } from "./health";
 import {
   HistoryFilterForm,
   RecentEvent,
@@ -39,8 +41,10 @@ export function App() {
   const [events, setEvents] = useState<RecentEvent[]>([]);
   const [historyStatus, setHistoryStatus] = useState<"loading" | "ready" | "error">("loading");
   const [historyError, setHistoryError] = useState("");
+  const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(null);
 
   const transaction = useMemo(() => toTransactionPayload(form), [form]);
+  const healthDisplay = useMemo(() => toHealthDisplay(healthResult), [healthResult]);
 
   const loadHistory = useCallback(async (filter: TransactionListFilter) => {
     setHistoryStatus("loading");
@@ -56,9 +60,18 @@ export function App() {
     setHistoryError(response.error);
   }, []);
 
+  const refreshHealth = useCallback(async () => {
+    setHealthResult(null);
+    setHealthResult(await checkCoreApiHealth());
+  }, []);
+
   useEffect(() => {
     void loadHistory(appliedHistoryFilter);
   }, [appliedHistoryFilter, loadHistory]);
+
+  useEffect(() => {
+    void refreshHealth();
+  }, []);
 
   async function submitTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -111,13 +124,17 @@ export function App() {
               <span>Environment</span>
               <strong><span className="status-dot" />Local</strong>
             </div>
-            <div className="status-item">
+            <button className="status-item status-button" type="button" onClick={() => void refreshHealth()}>
               <span>API Health</span>
-              <strong><span className="status-dot" />Ready</strong>
+              <strong><span className={`status-dot ${healthDisplay.tone}`} />{healthDisplay.label}</strong>
+            </button>
+            <div className="status-item">
+              <span>Response Time</span>
+              <strong>{healthDisplay.responseTime}</strong>
             </div>
             <div className="status-item">
-              <span>Contract</span>
-              <strong>OpenAPI 3.1</strong>
+              <span>Last Checked</span>
+              <strong>{healthDisplay.checkedAt}</strong>
             </div>
           </div>
         </header>

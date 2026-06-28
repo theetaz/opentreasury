@@ -108,7 +108,7 @@ textarea {
 
 .status-cluster {
   display: grid;
-  grid-template-columns: repeat(3, max-content);
+  grid-template-columns: repeat(4, max-content);
   gap: 0;
   border: 1px solid #dce4ec;
   border-radius: 8px;
@@ -122,6 +122,22 @@ textarea {
   min-width: 126px;
   padding: 11px 16px;
   border-right: 1px solid #edf1f5;
+}
+
+.status-button {
+  min-height: auto;
+  border: 0;
+  border-right: 1px solid #edf1f5;
+  border-radius: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+  font-size: inherit;
+  text-align: left;
+}
+
+.status-button:hover {
+  background: #f5f8fb;
 }
 
 .status-item:last-child {
@@ -148,6 +164,18 @@ textarea {
   height: 8px;
   border-radius: 999px;
   background: #1a9d73;
+}
+
+.status-dot.checking {
+  background: #c4871a;
+}
+
+.status-dot.healthy {
+  background: #1a9d73;
+}
+
+.status-dot.unreachable {
+  background: #d94c48;
 }
 
 .content-grid {
