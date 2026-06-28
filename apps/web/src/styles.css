@@ -255,6 +255,15 @@ button.secondary {
   color: #0f3d56;
 }
 
+button.text-button {
+  min-height: auto;
+  border: 1px solid #cfd9e3;
+  background: #ffffff;
+  color: #0f3d56;
+  padding: 7px 10px;
+  font-size: 12px;
+}
+
 button:disabled {
   cursor: wait;
   opacity: 0.65;
@@ -433,14 +442,14 @@ td {
   }
 
   td:nth-child(3)::before {
-    content: "Amount";
+    content: "Date";
   }
 
   td:nth-child(4)::before {
-    content: "Status";
+    content: "Amount";
   }
 
   td:nth-child(5)::before {
-    content: "Age";
+    content: "Status";
   }
 }
