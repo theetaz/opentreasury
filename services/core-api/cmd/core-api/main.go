@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 	"github.com/opentreasury/opentreasury/services/core-api/internal/httpapi"
@@ -12,8 +13,9 @@ import (
 )
 
 type config struct {
-	addr        string
-	databaseDSN string
+	addr           string
+	databaseDSN    string
+	allowedOrigins []string
 }
 
 func main() {
@@ -40,21 +42,41 @@ func loadConfig() config {
 	}
 
 	return config{
-		addr:        addr,
-		databaseDSN: os.Getenv("OPENTREASURY_DATABASE_DSN"),
+		addr:           addr,
+		databaseDSN:    os.Getenv("OPENTREASURY_DATABASE_DSN"),
+		allowedOrigins: splitCSV(os.Getenv("OPENTREASURY_ALLOWED_ORIGINS")),
 	}
 }
 
 func newServer(cfg config, db *sql.DB) *http.Server {
-	router := httpapi.NewRouter()
+	options := []httpapi.RouterOption{
+		httpapi.WithAllowedOrigins(cfg.allowedOrigins),
+	}
 	if db != nil {
-		router = httpapi.NewRouter(httpapi.WithTransactionRepository(treasury.NewPostgresTransactionRepository(db)))
+		options = append(options, httpapi.WithTransactionRepository(treasury.NewPostgresTransactionRepository(db)))
 	}
 
 	return &http.Server{
 		Addr:    cfg.addr,
-		Handler: router,
+		Handler: httpapi.NewRouter(options...),
 	}
+}
+
+func splitCSV(value string) []string {
+	if value == "" {
+		return nil
+	}
+
+	parts := strings.Split(value, ",")
+	values := make([]string, 0, len(parts))
+	for _, part := range parts {
+		trimmed := strings.TrimSpace(part)
+		if trimmed != "" {
+			values = append(values, trimmed)
+		}
+	}
+
+	return values
 }
 
 func openDatabase(cfg config) (*sql.DB, func() error, error) {
