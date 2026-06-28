@@ -9,8 +9,16 @@ import (
 
 func NewRouter() http.Handler {
 	mux := http.NewServeMux()
+	mux.HandleFunc("GET /healthz", health)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
 	return mux
+}
+
+func health(response http.ResponseWriter, request *http.Request) {
+	response.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(response).Encode(map[string]string{
+		"status": "ok",
+	})
 }
 
 func validateTransaction(response http.ResponseWriter, request *http.Request) {
