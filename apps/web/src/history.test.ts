@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import {
   buildTransactionsPath,
   formatTransactionAmount,
+  toTransactionListFilter,
   toRecentEvent
 } from "./history";
 
@@ -14,6 +15,32 @@ describe("buildTransactionsPath", () => {
         limit: 5
       })
     ).toBe("/v1/transactions?institutionId=minfin&fiscalYear=2026&limit=5");
+  });
+});
+
+describe("toTransactionListFilter", () => {
+  it("normalizes history filter form values", () => {
+    expect(
+      toTransactionListFilter({
+        institutionId: " minfin ",
+        fiscalYear: "2026",
+        limit: "10"
+      })
+    ).toEqual({
+      institutionId: "minfin",
+      fiscalYear: 2026,
+      limit: 10
+    });
+  });
+
+  it("drops empty and invalid filter values", () => {
+    expect(
+      toTransactionListFilter({
+        institutionId: " ",
+        fiscalYear: "not-a-year",
+        limit: "-5"
+      })
+    ).toEqual({});
   });
 });
 
