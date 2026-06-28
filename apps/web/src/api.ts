@@ -20,6 +20,18 @@ export type ApiResult =
   | { ok: true; status: number; data?: unknown }
   | { ok: false; status: number; error: string };
 
+export type ValidationResponse = {
+  status: "VALID";
+  code: "VALIDATION_SUCCESS";
+  message: string;
+  transactionId: string;
+  institutionId: string;
+  fiscalYear: number;
+  amountMinor: number;
+  currency: string;
+  transactionDate: string;
+};
+
 export type TransactionListResult =
   | { ok: true; transactions: TreasuryTransaction[] }
   | { ok: false; error: string };
@@ -203,5 +215,19 @@ function simulateValidation(transaction: TreasuryTransaction): ApiResult {
     return { ok: false, status: 400, error: "invalid transaction date" };
   }
 
-  return { ok: true, status: 204 };
+  return {
+    ok: true,
+    status: 200,
+    data: {
+      status: "VALID",
+      code: "VALIDATION_SUCCESS",
+      message: "Transaction is valid.",
+      transactionId: transaction.id,
+      institutionId: transaction.institutionId,
+      fiscalYear: transaction.fiscalYear,
+      amountMinor: transaction.amountMinor,
+      currency: transaction.currency,
+      transactionDate: transaction.transactionDate
+    } satisfies ValidationResponse
+  };
 }
