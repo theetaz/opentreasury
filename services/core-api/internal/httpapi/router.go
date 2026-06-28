@@ -18,11 +18,23 @@ type RouterOption func(*routerConfig)
 
 type routerConfig struct {
 	transactionRepository TransactionRepository
+	allowedOrigins        map[string]struct{}
 }
 
 func WithTransactionRepository(repository TransactionRepository) RouterOption {
 	return func(config *routerConfig) {
 		config.transactionRepository = repository
+	}
+}
+
+func WithAllowedOrigins(origins []string) RouterOption {
+	return func(config *routerConfig) {
+		config.allowedOrigins = make(map[string]struct{}, len(origins))
+		for _, origin := range origins {
+			if origin != "" {
+				config.allowedOrigins[origin] = struct{}{}
+			}
+		}
 	}
 }
 
@@ -37,7 +49,30 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
-	return mux
+	return config.withCORS(mux)
+}
+
+func (config routerConfig) withCORS(next http.Handler) http.Handler {
+	if len(config.allowedOrigins) == 0 {
+		return next
+	}
+
+	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		origin := request.Header.Get("Origin")
+		if _, ok := config.allowedOrigins[origin]; ok {
+			response.Header().Set("Access-Control-Allow-Origin", origin)
+			response.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			response.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			response.Header().Set("Vary", "Origin")
+		}
+
+		if request.Method == http.MethodOptions {
+			response.WriteHeader(http.StatusNoContent)
+			return
+		}
+
+		next.ServeHTTP(response, request)
+	})
 }
 
 func health(response http.ResponseWriter, request *http.Request) {

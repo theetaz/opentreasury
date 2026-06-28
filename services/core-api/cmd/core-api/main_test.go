@@ -83,6 +83,14 @@ func TestLoadConfigUsesDatabaseDSN(t *testing.T) {
 	}
 }
 
+func TestLoadConfigUsesAllowedOrigins(t *testing.T) {
+	t.Setenv("OPENTREASURY_ALLOWED_ORIGINS", "http://localhost:5173, https://treasury.example")
+
+	cfg := loadConfig()
+
+	require.Equal(t, []string{"http://localhost:5173", "https://treasury.example"}, cfg.allowedOrigins)
+}
+
 func TestOpenDatabaseWithoutDSN(t *testing.T) {
 	db, closeDatabase, err := openDatabase(config{})
 
