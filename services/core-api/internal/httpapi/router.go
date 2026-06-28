@@ -94,7 +94,30 @@ func validateTransaction(response http.ResponseWriter, request *http.Request) {
 		return
 	}
 
-	response.WriteHeader(http.StatusNoContent)
+	response.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(response).Encode(validationResponse{
+		Status:          "VALID",
+		Code:            "VALIDATION_SUCCESS",
+		Message:         "Transaction is valid.",
+		TransactionID:   tx.ID,
+		InstitutionID:   tx.InstitutionID,
+		FiscalYear:      tx.FiscalYear,
+		AmountMinor:     tx.AmountMinor,
+		Currency:        tx.Currency,
+		TransactionDate: tx.TransactionDate,
+	})
+}
+
+type validationResponse struct {
+	Status          string `json:"status"`
+	Code            string `json:"code"`
+	Message         string `json:"message"`
+	TransactionID   string `json:"transactionId"`
+	InstitutionID   string `json:"institutionId"`
+	FiscalYear      int    `json:"fiscalYear"`
+	AmountMinor     int64  `json:"amountMinor"`
+	Currency        string `json:"currency"`
+	TransactionDate string `json:"transactionDate"`
 }
 
 func (config routerConfig) createTransaction(response http.ResponseWriter, request *http.Request) {
