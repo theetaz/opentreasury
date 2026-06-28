@@ -1,0 +1,43 @@
+# Dependencies
+node_modules/
+
+# Build output
+dist/
+build/
+coverage/
+*.out
+
+# Go
+bin/
+vendor/
+
+# Mobile
+.expo/
+android/
+ios/
+
+# Local environment and secrets
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.crt
+
+# Local runtime state
+.DS_Store
+*.log
+tmp/
+temp/
+
+# Infrastructure state
+.terraform/
+*.tfstate
+*.tfstate.*
+kubeconfig*
+
+# Local tool state and private machine files
+.cache/
+.local/
+.memory/
+transcripts/

@@ -1,0 +1,10 @@
+go 1.22
+
+use (
+	./chaincode/treasury
+	./services/connectors/generic-file
+	./services/core-api
+	./services/ledger-gateway
+	./services/mcp-server
+	./workers/treasury-worker
+)
