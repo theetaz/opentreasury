@@ -14,16 +14,30 @@ type TransactionRepository interface {
 	List(context.Context, treasury.ListTransactionsFilter) ([]treasury.Transaction, error)
 }
 
+type AuditEventRepository interface {
+	ListAuditEvents(context.Context, treasury.ListAuditEventsFilter) ([]treasury.AuditEvent, error)
+}
+
 type RouterOption func(*routerConfig)
 
 type routerConfig struct {
 	transactionRepository TransactionRepository
+	auditEventRepository  AuditEventRepository
 	allowedOrigins        map[string]struct{}
 }
 
 func WithTransactionRepository(repository TransactionRepository) RouterOption {
 	return func(config *routerConfig) {
 		config.transactionRepository = repository
+		if auditRepository, ok := repository.(AuditEventRepository); ok {
+			config.auditEventRepository = auditRepository
+		}
+	}
+}
+
+func WithAuditEventRepository(repository AuditEventRepository) RouterOption {
+	return func(config *routerConfig) {
+		config.auditEventRepository = repository
 	}
 }
 
@@ -46,6 +60,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health)
+	mux.HandleFunc("GET /v1/audit-events", config.listAuditEvents)
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
@@ -173,8 +188,36 @@ func (config routerConfig) listTransactions(response http.ResponseWriter, reques
 	})
 }
 
+func (config routerConfig) listAuditEvents(response http.ResponseWriter, request *http.Request) {
+	if config.auditEventRepository == nil {
+		writeError(response, http.StatusServiceUnavailable, "audit event repository is not configured")
+		return
+	}
+
+	filter, err := parseListAuditEventsFilter(request)
+	if err != nil {
+		writeError(response, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	events, err := config.auditEventRepository.ListAuditEvents(request.Context(), filter)
+	if err != nil {
+		writeError(response, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(response).Encode(listAuditEventsResponse{
+		Events: toAuditEventResponses(events),
+	})
+}
+
 type listTransactionsResponse struct {
 	Transactions []transactionResponse `json:"transactions"`
+}
+
+type listAuditEventsResponse struct {
+	Events []auditEventResponse `json:"events"`
 }
 
 type transactionResponse struct {
@@ -185,6 +228,15 @@ type transactionResponse struct {
 	Currency        string `json:"currency"`
 	Description     string `json:"description"`
 	TransactionDate string `json:"transactionDate"`
+}
+
+type auditEventResponse struct {
+	ID            string `json:"id"`
+	EventType     string `json:"eventType"`
+	TransactionID string `json:"transactionId"`
+	InstitutionID string `json:"institutionId"`
+	OccurredAt    string `json:"occurredAt"`
+	Summary       string `json:"summary"`
 }
 
 func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactionsFilter, error) {
@@ -216,6 +268,27 @@ func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactio
 	return filter, nil
 }
 
+func parseListAuditEventsFilter(request *http.Request) (treasury.ListAuditEventsFilter, error) {
+	query := request.URL.Query()
+	filter := treasury.ListAuditEventsFilter{
+		InstitutionID: query.Get("institutionId"),
+		Limit:         50,
+	}
+
+	if limit := query.Get("limit"); limit != "" {
+		value, err := strconv.Atoi(limit)
+		if err != nil || value <= 0 {
+			return treasury.ListAuditEventsFilter{}, treasury.ErrInvalidAmount
+		}
+		if value > 100 {
+			value = 100
+		}
+		filter.Limit = value
+	}
+
+	return filter, nil
+}
+
 func toTransactionResponses(transactions []treasury.Transaction) []transactionResponse {
 	responses := make([]transactionResponse, 0, len(transactions))
 	for _, tx := range transactions {
@@ -227,6 +300,22 @@ func toTransactionResponses(transactions []treasury.Transaction) []transactionRe
 			Currency:        tx.Currency,
 			Description:     tx.Description,
 			TransactionDate: tx.TransactionDate,
+		})
+	}
+
+	return responses
+}
+
+func toAuditEventResponses(events []treasury.AuditEvent) []auditEventResponse {
+	responses := make([]auditEventResponse, 0, len(events))
+	for _, event := range events {
+		responses = append(responses, auditEventResponse{
+			ID:            event.ID,
+			EventType:     event.EventType,
+			TransactionID: event.TransactionID,
+			InstitutionID: event.InstitutionID,
+			OccurredAt:    event.OccurredAt,
+			Summary:       event.Summary,
 		})
 	}
 

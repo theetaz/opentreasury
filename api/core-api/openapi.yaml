@@ -17,6 +17,42 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /v1/audit-events:
+    get:
+      operationId: listAuditEvents
+      summary: List treasury audit events
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Filter audit events by institution identifier.
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum number of audit events to return.
+      responses:
+        "200":
+          description: Matching audit events ordered by most recent occurrence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAuditEventsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Audit event persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/transactions/validate:
     post:
       operationId: validateTransaction
@@ -177,6 +213,40 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TreasuryTransaction"
+    ListAuditEventsResponse:
+      type: object
+      required:
+        - events
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+    AuditEvent:
+      type: object
+      required:
+        - id
+        - eventType
+        - transactionId
+        - institutionId
+        - occurredAt
+        - summary
+      properties:
+        id:
+          type: string
+        eventType:
+          type: string
+          enum:
+            - TRANSACTION_CREATED
+        transactionId:
+          type: string
+        institutionId:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        summary:
+          type: string
     ValidationResponse:
       type: object
       required:
