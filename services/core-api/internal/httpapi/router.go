@@ -4,12 +4,14 @@ import (
 	"context"
 	"encoding/json"
 	"net/http"
+	"strconv"
 
 	"github.com/opentreasury/opentreasury/services/core-api/internal/treasury"
 )
 
 type TransactionRepository interface {
 	Save(context.Context, treasury.Transaction) error
+	List(context.Context, treasury.ListTransactionsFilter) ([]treasury.Transaction, error)
 }
 
 type RouterOption func(*routerConfig)
@@ -32,6 +34,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health)
+	mux.HandleFunc("GET /v1/transactions", config.listTransactions)
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
 	return mux
@@ -86,6 +89,90 @@ func (config routerConfig) createTransaction(response http.ResponseWriter, reque
 	_ = json.NewEncoder(response).Encode(map[string]string{
 		"id": tx.ID,
 	})
+}
+
+func (config routerConfig) listTransactions(response http.ResponseWriter, request *http.Request) {
+	if config.transactionRepository == nil {
+		writeError(response, http.StatusServiceUnavailable, "transaction repository is not configured")
+		return
+	}
+
+	filter, err := parseListTransactionsFilter(request)
+	if err != nil {
+		writeError(response, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	transactions, err := config.transactionRepository.List(request.Context(), filter)
+	if err != nil {
+		writeError(response, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(response).Encode(listTransactionsResponse{
+		Transactions: toTransactionResponses(transactions),
+	})
+}
+
+type listTransactionsResponse struct {
+	Transactions []transactionResponse `json:"transactions"`
+}
+
+type transactionResponse struct {
+	ID              string `json:"id"`
+	InstitutionID   string `json:"institutionId"`
+	FiscalYear      int    `json:"fiscalYear"`
+	AmountMinor     int64  `json:"amountMinor"`
+	Currency        string `json:"currency"`
+	Description     string `json:"description"`
+	TransactionDate string `json:"transactionDate"`
+}
+
+func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactionsFilter, error) {
+	query := request.URL.Query()
+	filter := treasury.ListTransactionsFilter{
+		InstitutionID: query.Get("institutionId"),
+		Limit:         50,
+	}
+
+	if fiscalYear := query.Get("fiscalYear"); fiscalYear != "" {
+		value, err := strconv.Atoi(fiscalYear)
+		if err != nil || value <= 0 {
+			return treasury.ListTransactionsFilter{}, treasury.ErrInvalidFiscalYear
+		}
+		filter.FiscalYear = value
+	}
+
+	if limit := query.Get("limit"); limit != "" {
+		value, err := strconv.Atoi(limit)
+		if err != nil || value <= 0 {
+			return treasury.ListTransactionsFilter{}, treasury.ErrInvalidAmount
+		}
+		if value > 100 {
+			value = 100
+		}
+		filter.Limit = value
+	}
+
+	return filter, nil
+}
+
+func toTransactionResponses(transactions []treasury.Transaction) []transactionResponse {
+	responses := make([]transactionResponse, 0, len(transactions))
+	for _, tx := range transactions {
+		responses = append(responses, transactionResponse{
+			ID:              tx.ID,
+			InstitutionID:   tx.InstitutionID,
+			FiscalYear:      tx.FiscalYear,
+			AmountMinor:     tx.AmountMinor,
+			Currency:        tx.Currency,
+			Description:     tx.Description,
+			TransactionDate: tx.TransactionDate,
+		})
+	}
+
+	return responses
 }
 
 func writeError(response http.ResponseWriter, statusCode int, message string) {

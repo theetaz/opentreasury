@@ -26,6 +26,12 @@ type Transaction struct {
 	TransactionDate string
 }
 
+type ListTransactionsFilter struct {
+	InstitutionID string
+	FiscalYear    int
+	Limit         int
+}
+
 func ValidateTransaction(tx Transaction) error {
 	switch {
 	case tx.ID == "":
