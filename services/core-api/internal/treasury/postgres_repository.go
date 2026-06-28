@@ -106,3 +106,61 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 
 	return transactions, nil
 }
+
+func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Context, filter ListAuditEventsFilter) ([]AuditEvent, error) {
+	query := `
+		SELECT
+			'audit-' || id || '-created' AS id,
+			'TRANSACTION_CREATED' AS event_type,
+			id AS transaction_id,
+			institution_id,
+			created_at::text AS occurred_at,
+			'Transaction ' || id || ' was created.' AS summary
+		FROM treasury_transactions
+	`
+	args := make([]any, 0, 2)
+	conditions := make([]string, 0, 1)
+
+	if filter.InstitutionID != "" {
+		args = append(args, filter.InstitutionID)
+		conditions = append(conditions, fmt.Sprintf("institution_id = $%d", len(args)))
+	}
+
+	if len(conditions) > 0 {
+		query += "WHERE " + strings.Join(conditions, " AND ") + "\n"
+	}
+
+	args = append(args, filter.Limit)
+	query += fmt.Sprintf(`		ORDER BY created_at DESC, id DESC
+		LIMIT $%d
+	`, len(args))
+
+	rows, err := repository.db.QueryContext(ctx, query, args...)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var events []AuditEvent
+	for rows.Next() {
+		var event AuditEvent
+		if err := rows.Scan(
+			&event.ID,
+			&event.EventType,
+			&event.TransactionID,
+			&event.InstitutionID,
+			&event.OccurredAt,
+			&event.Summary,
+		); err != nil {
+			return nil, err
+		}
+
+		events = append(events, event)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return events, nil
+}

@@ -142,6 +142,57 @@ func TestPostgresTransactionRepository_ListReturnsRecentTransactions(t *testing.
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgresTransactionRepository_ListAuditEventsReturnsTransactionCreationEvents(t *testing.T) {
+	db, mock := newMockDB(t)
+	repository := NewPostgresTransactionRepository(db)
+
+	rows := sqlmock.NewRows([]string{
+		"id",
+		"event_type",
+		"transaction_id",
+		"institution_id",
+		"occurred_at",
+		"summary",
+	}).
+		AddRow(
+			"audit-txn-2026-0001-created",
+			"TRANSACTION_CREATED",
+			"txn-2026-0001",
+			"minfin",
+			"2026-06-28T10:24:28Z",
+			"Transaction txn-2026-0001 was created.",
+		)
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT
+			'audit-' || id || '-created' AS id,
+			'TRANSACTION_CREATED' AS event_type,
+			id AS transaction_id,
+			institution_id,
+			created_at::text AS occurred_at,
+			'Transaction ' || id || ' was created.' AS summary
+		FROM treasury_transactions
+		WHERE institution_id = $1
+		ORDER BY created_at DESC, id DESC
+		LIMIT $2
+	`)).
+		WithArgs("minfin", 25).
+		WillReturnRows(rows)
+
+	events, err := repository.ListAuditEvents(context.Background(), ListAuditEventsFilter{
+		InstitutionID: "minfin",
+		Limit:         25,
+	})
+
+	require.NoError(t, err)
+	require.Len(t, events, 1)
+	require.Equal(t, "audit-txn-2026-0001-created", events[0].ID)
+	require.Equal(t, "TRANSACTION_CREATED", events[0].EventType)
+	require.Equal(t, "txn-2026-0001", events[0].TransactionID)
+	require.Equal(t, "minfin", events[0].InstitutionID)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func newMockDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock) {
 	t.Helper()
 
