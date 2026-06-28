@@ -9,6 +9,12 @@ export type RecentEvent = {
   time: string;
 };
 
+export type HistoryFilterForm = {
+  institutionId: string;
+  fiscalYear: string;
+  limit: string;
+};
+
 export function buildTransactionsPath(filter: TransactionListFilter = {}): string {
   const params = new URLSearchParams();
 
@@ -26,6 +32,27 @@ export function buildTransactionsPath(filter: TransactionListFilter = {}): strin
 
   const query = params.toString();
   return query ? `/v1/transactions?${query}` : "/v1/transactions";
+}
+
+export function toTransactionListFilter(form: HistoryFilterForm): TransactionListFilter {
+  const filter: TransactionListFilter = {};
+  const institutionId = form.institutionId.trim();
+  const fiscalYear = Number(form.fiscalYear);
+  const limit = Number(form.limit);
+
+  if (institutionId) {
+    filter.institutionId = institutionId;
+  }
+
+  if (Number.isInteger(fiscalYear) && fiscalYear > 0) {
+    filter.fiscalYear = fiscalYear;
+  }
+
+  if (Number.isInteger(limit) && limit > 0) {
+    filter.limit = limit;
+  }
+
+  return filter;
 }
 
 export function formatTransactionAmount(currency: string, amountMinor: number): string {

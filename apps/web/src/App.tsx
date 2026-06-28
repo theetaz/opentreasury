@@ -5,7 +5,13 @@ import {
   listTransactions,
   validateTransaction
 } from "./api";
-import { RecentEvent, toRecentEvent } from "./history";
+import type { TransactionListFilter } from "./api";
+import {
+  HistoryFilterForm,
+  RecentEvent,
+  toRecentEvent,
+  toTransactionListFilter
+} from "./history";
 import { TransactionFormState, toTransactionPayload } from "./transaction";
 
 const initialForm: TransactionFormState = {
@@ -18,8 +24,16 @@ const initialForm: TransactionFormState = {
   description: "Road maintenance payment"
 };
 
+const initialHistoryFilter: HistoryFilterForm = {
+  institutionId: "",
+  fiscalYear: "",
+  limit: "5"
+};
+
 export function App() {
   const [form, setForm] = useState<TransactionFormState>(initialForm);
+  const [historyFilter, setHistoryFilter] = useState<HistoryFilterForm>(initialHistoryFilter);
+  const [appliedHistoryFilter, setAppliedHistoryFilter] = useState<TransactionListFilter>(() => toTransactionListFilter(initialHistoryFilter));
   const [result, setResult] = useState<ApiResult | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [events, setEvents] = useState<RecentEvent[]>([]);
@@ -28,9 +42,9 @@ export function App() {
 
   const transaction = useMemo(() => toTransactionPayload(form), [form]);
 
-  const loadHistory = useCallback(async () => {
+  const loadHistory = useCallback(async (filter: TransactionListFilter) => {
     setHistoryStatus("loading");
-    const response = await listTransactions({ limit: 5 });
+    const response = await listTransactions(filter);
     if (response.ok) {
       setEvents(response.transactions.map(toRecentEvent));
       setHistoryStatus("ready");
@@ -43,12 +57,17 @@ export function App() {
   }, []);
 
   useEffect(() => {
-    void loadHistory();
-  }, [loadHistory]);
+    void loadHistory(appliedHistoryFilter);
+  }, [appliedHistoryFilter, loadHistory]);
 
   async function submitTransaction(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     await runAction("validate");
+  }
+
+  async function submitHistoryFilter(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setAppliedHistoryFilter(toTransactionListFilter(historyFilter));
   }
 
   async function runAction(action: "validate" | "create") {
@@ -143,10 +162,32 @@ export function App() {
 
             <div className="table-heading">
               <h2>Recent activity</h2>
-              <button className="text-button" type="button" onClick={() => void loadHistory()}>
+              <button className="text-button" type="button" onClick={() => void loadHistory(appliedHistoryFilter)}>
                 Refresh
               </button>
             </div>
+            <form className="history-filters" onSubmit={submitHistoryFilter} aria-label="Transaction history filters">
+              <Field
+                label="Institution"
+                value={historyFilter.institutionId}
+                onChange={(institutionId) => setHistoryFilter({ ...historyFilter, institutionId })}
+              />
+              <Field
+                label="Fiscal Year"
+                value={historyFilter.fiscalYear}
+                onChange={(fiscalYear) => setHistoryFilter({ ...historyFilter, fiscalYear })}
+                inputMode="numeric"
+              />
+              <Field
+                label="Limit"
+                value={historyFilter.limit}
+                onChange={(limit) => setHistoryFilter({ ...historyFilter, limit })}
+                inputMode="numeric"
+              />
+              <button className="secondary" type="submit">
+                Apply
+              </button>
+            </form>
             <table>
               <thead>
                 <tr>
