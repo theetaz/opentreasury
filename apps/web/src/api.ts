@@ -1,3 +1,4 @@
+import { buildAuditEventsPath } from "./audit";
 import { buildTransactionsPath } from "./history";
 
 export type TreasuryTransaction = {
@@ -13,6 +14,11 @@ export type TreasuryTransaction = {
 export type TransactionListFilter = {
   institutionId?: string;
   fiscalYear?: number;
+  limit?: number;
+};
+
+export type AuditEventListFilter = {
+  institutionId?: string;
   limit?: number;
 };
 
@@ -34,6 +40,19 @@ export type ValidationResponse = {
 
 export type TransactionListResult =
   | { ok: true; transactions: TreasuryTransaction[] }
+  | { ok: false; error: string };
+
+export type AuditEvent = {
+  id: string;
+  eventType: "TRANSACTION_CREATED";
+  transactionId: string;
+  institutionId: string;
+  occurredAt: string;
+  summary: string;
+};
+
+export type AuditEventListResult =
+  | { ok: true; events: AuditEvent[] }
   | { ok: false; error: string };
 
 export type HealthCheckResult =
@@ -69,6 +88,33 @@ const simulatedTransactions: TreasuryTransaction[] = [
     currency: "USD",
     description: "Clinic equipment procurement",
     transactionDate: "2025-12-18"
+  }
+];
+
+const simulatedAuditEvents: AuditEvent[] = [
+  {
+    id: "audit-txn-2026-0001-created",
+    eventType: "TRANSACTION_CREATED",
+    transactionId: "txn-2026-0001",
+    institutionId: "minfin",
+    occurredAt: "2026-06-28T10:24:28Z",
+    summary: "Transaction txn-2026-0001 was created."
+  },
+  {
+    id: "audit-txn-2026-0000-created",
+    eventType: "TRANSACTION_CREATED",
+    transactionId: "txn-2026-0000",
+    institutionId: "transport",
+    occurredAt: "2026-06-27T15:10:42Z",
+    summary: "Transaction txn-2026-0000 was created."
+  },
+  {
+    id: "audit-txn-2025-0942-created",
+    eventType: "TRANSACTION_CREATED",
+    transactionId: "txn-2025-0942",
+    institutionId: "health",
+    occurredAt: "2025-12-18T09:45:00Z",
+    summary: "Transaction txn-2025-0942 was created."
   }
 ];
 
@@ -120,6 +166,29 @@ export async function listTransactions(filter: TransactionListFilter = { limit: 
 
     const body = (await response.json()) as { transactions?: TreasuryTransaction[] };
     return { ok: true, transactions: body.transactions ?? [] };
+  } catch {
+    return { ok: false, error: "Core API is not reachable" };
+  }
+}
+
+export async function listAuditEvents(filter: AuditEventListFilter = { limit: 5 }): Promise<AuditEventListResult> {
+  if (!apiBaseUrl) {
+    return { ok: true, events: filterSimulatedAuditEvents(filter) };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${buildAuditEventsPath(filter)}`);
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return {
+        ok: false,
+        error: body?.error ?? `Request failed with status ${response.status}`
+      };
+    }
+
+    const body = (await response.json()) as { events?: AuditEvent[] };
+    return { ok: true, events: body.events ?? [] };
   } catch {
     return { ok: false, error: "Core API is not reachable" };
   }
@@ -179,6 +248,12 @@ function filterSimulatedTransactions(filter: TransactionListFilter): TreasuryTra
   return simulatedTransactions
     .filter((transaction) => !filter.institutionId || transaction.institutionId === filter.institutionId)
     .filter((transaction) => !filter.fiscalYear || transaction.fiscalYear === filter.fiscalYear)
+    .slice(0, filter.limit ?? 5);
+}
+
+function filterSimulatedAuditEvents(filter: AuditEventListFilter): AuditEvent[] {
+  return simulatedAuditEvents
+    .filter((event) => !filter.institutionId || event.institutionId === filter.institutionId)
     .slice(0, filter.limit ?? 5);
 }
 

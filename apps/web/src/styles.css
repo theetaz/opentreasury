@@ -205,6 +205,10 @@ textarea {
   margin-bottom: 16px;
 }
 
+.audit-heading {
+  margin-top: 22px;
+}
+
 .panel h2,
 .table-heading h2 {
   margin: 0;
@@ -473,23 +477,43 @@ td {
     font-weight: 800;
   }
 
-  td:nth-child(1)::before {
+  .activity-table td:nth-child(1)::before {
     content: "Transaction";
   }
 
-  td:nth-child(2)::before {
+  .activity-table td:nth-child(2)::before {
     content: "Institution";
   }
 
-  td:nth-child(3)::before {
+  .activity-table td:nth-child(3)::before {
     content: "Date";
   }
 
-  td:nth-child(4)::before {
+  .activity-table td:nth-child(4)::before {
     content: "Amount";
   }
 
-  td:nth-child(5)::before {
+  .activity-table td:nth-child(5)::before {
     content: "Status";
+  }
+
+  .audit-table td:nth-child(1)::before {
+    content: "Event";
+  }
+
+  .audit-table td:nth-child(2)::before {
+    content: "Transaction";
+  }
+
+  .audit-table td:nth-child(3)::before {
+    content: "Institution";
+  }
+
+  .audit-table td:nth-child(4)::before {
+    content: "Occurred";
+  }
+
+  .audit-table td:nth-child(5)::before {
+    content: "Summary";
   }
 }
