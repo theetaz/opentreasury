@@ -14,7 +14,8 @@ verify-integration:
 
 verify-js:
 	@if command -v pnpm >/dev/null 2>&1 && [ -d node_modules ]; then \
-		pnpm -r typecheck; \
+		pnpm --filter @opentreasury/web test; \
+		pnpm --filter @opentreasury/web --filter @opentreasury/types --filter @opentreasury/ui typecheck; \
 	else \
 		echo "Skipping JS verification until pnpm dependencies are installed."; \
 	fi
