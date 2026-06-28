@@ -24,6 +24,10 @@ export type TransactionListResult =
   | { ok: true; transactions: TreasuryTransaction[] }
   | { ok: false; error: string };
 
+export type HealthCheckResult =
+  | { ok: true; responseTimeMs: number; checkedAt: string }
+  | { ok: false; error: string; checkedAt: string };
+
 const apiBaseUrl = import.meta.env.VITE_CORE_API_URL;
 
 const simulatedTransactions: TreasuryTransaction[] = [
@@ -55,6 +59,36 @@ const simulatedTransactions: TreasuryTransaction[] = [
     transactionDate: "2025-12-18"
   }
 ];
+
+export async function checkCoreApiHealth(): Promise<HealthCheckResult> {
+  if (!apiBaseUrl) {
+    return { ok: true, responseTimeMs: 0, checkedAt: new Date().toISOString() };
+  }
+
+  const startedAt = Date.now();
+  try {
+    const response = await fetch(`${apiBaseUrl}/healthz`);
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: `Health check failed with status ${response.status}`,
+        checkedAt: new Date().toISOString()
+      };
+    }
+
+    return {
+      ok: true,
+      responseTimeMs: Date.now() - startedAt,
+      checkedAt: new Date().toISOString()
+    };
+  } catch {
+    return {
+      ok: false,
+      error: "Core API is not reachable",
+      checkedAt: new Date().toISOString()
+    };
+  }
+}
 
 export async function listTransactions(filter: TransactionListFilter = { limit: 5 }): Promise<TransactionListResult> {
   if (!apiBaseUrl) {
