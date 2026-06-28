@@ -1,5 +1,7 @@
 .PHONY: verify verify-go verify-integration verify-js
 
+PNPM ?= corepack pnpm
+
 verify: verify-go verify-integration verify-js
 
 verify-go:
@@ -13,9 +15,9 @@ verify-integration:
 	@(cd services/core-api && go test -tags=integration ./test/integration)
 
 verify-js:
-	@if command -v pnpm >/dev/null 2>&1 && [ -d node_modules ]; then \
-		pnpm --filter @opentreasury/web test; \
-		pnpm --filter @opentreasury/web --filter @opentreasury/types --filter @opentreasury/ui typecheck; \
+	@if [ -d node_modules ]; then \
+		$(PNPM) --filter @opentreasury/web test; \
+		$(PNPM) --filter @opentreasury/web --filter @opentreasury/types --filter @opentreasury/ui typecheck; \
 	else \
 		echo "Skipping JS verification until pnpm dependencies are installed."; \
 	fi
