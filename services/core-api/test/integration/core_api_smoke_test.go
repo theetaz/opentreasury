@@ -47,8 +47,17 @@ func TestCoreAPISmoke(t *testing.T) {
 	})
 	defer response.Body.Close()
 
-	if response.StatusCode != http.StatusNoContent {
-		t.Fatalf("response.StatusCode = %d, want %d", response.StatusCode, http.StatusNoContent)
+	if response.StatusCode != http.StatusOK {
+		t.Fatalf("response.StatusCode = %d, want %d", response.StatusCode, http.StatusOK)
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(response.Body).Decode(&body); err != nil {
+		t.Fatalf("Decode(response.Body) error = %v", err)
+	}
+
+	if body["status"] != "VALID" {
+		t.Fatalf("body[status] = %q, want %q", body["status"], "VALID")
 	}
 }
 

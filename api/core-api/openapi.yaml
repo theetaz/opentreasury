@@ -28,8 +28,12 @@ paths:
             schema:
               $ref: "#/components/schemas/TreasuryTransaction"
       responses:
-        "204":
+        "200":
           description: Transaction is valid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
   /v1/transactions:
@@ -173,6 +177,42 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/TreasuryTransaction"
+    ValidationResponse:
+      type: object
+      required:
+        - status
+        - code
+        - message
+        - transactionId
+        - institutionId
+        - fiscalYear
+        - amountMinor
+        - currency
+        - transactionDate
+      properties:
+        status:
+          type: string
+          enum:
+            - VALID
+        code:
+          type: string
+          enum:
+            - VALIDATION_SUCCESS
+        message:
+          type: string
+        transactionId:
+          type: string
+        institutionId:
+          type: string
+        fiscalYear:
+          type: integer
+        amountMinor:
+          type: integer
+        currency:
+          type: string
+        transactionDate:
+          type: string
+          format: date
     ErrorResponse:
       type: object
       required:
