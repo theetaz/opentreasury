@@ -61,6 +61,29 @@ func TestCreateTransactionEndpointRejectsInvalidTransaction(t *testing.T) {
 	require.Equal(t, "invalid amount", body["error"])
 }
 
+func TestCreateTransactionEndpointRequiresRepository(t *testing.T) {
+	request := httptest.NewRequest(http.MethodPost, "/v1/transactions", strings.NewReader(`{
+		"id": "txn-2026-0001",
+		"institutionId": "minfin",
+		"fiscalYear": 2026,
+		"amountMinor": 125000,
+		"currency": "USD",
+		"description": "Road maintenance payment",
+		"transactionDate": "2026-06-28"
+	}`))
+	response := httptest.NewRecorder()
+
+	require.NotPanics(t, func() {
+		NewRouter().ServeHTTP(response, request)
+	})
+	require.Equal(t, http.StatusServiceUnavailable, response.Code)
+
+	var body map[string]string
+	err := json.NewDecoder(response.Body).Decode(&body)
+	require.NoError(t, err)
+	require.Equal(t, "transaction repository is not configured", body["error"])
+}
+
 type recordingTransactionRepository struct {
 	saved []treasury.Transaction
 }
