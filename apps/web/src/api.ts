@@ -1,5 +1,6 @@
 import { buildAuditEventsPath } from "./audit";
 import { buildTransactionsPath } from "./history";
+import { buildInstitutionsPath } from "./institutions";
 
 export type TreasuryTransaction = {
   id: string;
@@ -19,6 +20,10 @@ export type TransactionListFilter = {
 
 export type AuditEventListFilter = {
   institutionId?: string;
+  limit?: number;
+};
+
+export type InstitutionListFilter = {
   limit?: number;
 };
 
@@ -53,6 +58,18 @@ export type AuditEvent = {
 
 export type AuditEventListResult =
   | { ok: true; events: AuditEvent[] }
+  | { ok: false; error: string };
+
+export type Institution = {
+  id: string;
+  name: string;
+  type: "MINISTRY" | "DEPARTMENT" | "AGENCY" | "COUNTY";
+  countryCode: string;
+  status: "ACTIVE" | "INACTIVE";
+};
+
+export type InstitutionListResult =
+  | { ok: true; institutions: Institution[] }
   | { ok: false; error: string };
 
 export type HealthCheckResult =
@@ -115,6 +132,30 @@ const simulatedAuditEvents: AuditEvent[] = [
     institutionId: "health",
     occurredAt: "2025-12-18T09:45:00Z",
     summary: "Transaction txn-2025-0942 was created."
+  }
+];
+
+const simulatedInstitutions: Institution[] = [
+  {
+    id: "minfin",
+    name: "Ministry of Finance",
+    type: "MINISTRY",
+    countryCode: "KE",
+    status: "ACTIVE"
+  },
+  {
+    id: "health",
+    name: "Ministry of Health",
+    type: "MINISTRY",
+    countryCode: "KE",
+    status: "ACTIVE"
+  },
+  {
+    id: "transport",
+    name: "Transport Infrastructure Agency",
+    type: "AGENCY",
+    countryCode: "KE",
+    status: "ACTIVE"
   }
 ];
 
@@ -189,6 +230,29 @@ export async function listAuditEvents(filter: AuditEventListFilter = { limit: 5 
 
     const body = (await response.json()) as { events?: AuditEvent[] };
     return { ok: true, events: body.events ?? [] };
+  } catch {
+    return { ok: false, error: "Core API is not reachable" };
+  }
+}
+
+export async function listInstitutions(filter: InstitutionListFilter = { limit: 5 }): Promise<InstitutionListResult> {
+  if (!apiBaseUrl) {
+    return { ok: true, institutions: simulatedInstitutions.slice(0, filter.limit ?? 5) };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${buildInstitutionsPath(filter)}`);
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return {
+        ok: false,
+        error: body?.error ?? `Request failed with status ${response.status}`
+      };
+    }
+
+    const body = (await response.json()) as { institutions?: Institution[] };
+    return { ok: true, institutions: body.institutions ?? [] };
   } catch {
     return { ok: false, error: "Core API is not reachable" };
   }

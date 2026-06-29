@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { listAuditEvents, validateTransaction } from "./api";
+import { listAuditEvents, listInstitutions, validateTransaction } from "./api";
 
 describe("validateTransaction", () => {
   it("returns the core API validation result shape in local simulation", async () => {
@@ -43,6 +43,23 @@ describe("listAuditEvents", () => {
           institutionId: "minfin",
           occurredAt: "2026-06-28T10:24:28Z",
           summary: "Transaction txn-2026-0001 was created."
+        }
+      ]
+    });
+  });
+});
+
+describe("listInstitutions", () => {
+  it("returns simulated institutions in local mode", async () => {
+    await expect(listInstitutions({ limit: 1 })).resolves.toEqual({
+      ok: true,
+      institutions: [
+        {
+          id: "minfin",
+          name: "Ministry of Finance",
+          type: "MINISTRY",
+          countryCode: "KE",
+          status: "ACTIVE"
         }
       ]
     });
