@@ -328,15 +328,33 @@ button:disabled {
 
 .badge.ok,
 .row-status.valid,
-.row-status.created {
+.row-status.created,
+.row-status.active {
   background: #e7f7f1;
   color: #137052;
 }
 
 .badge.blocked,
-.row-status.blocked {
+.row-status.blocked,
+.row-status.inactive {
   background: #fff3df;
   color: #9a5b00;
+}
+
+.entity-name,
+.entity-id {
+  display: block;
+}
+
+.entity-name {
+  color: #17263a;
+  font-size: 13px;
+}
+
+.entity-id {
+  margin-top: 3px;
+  color: #718093;
+  font-size: 12px;
 }
 
 .response-preview {
@@ -494,6 +512,22 @@ td {
   }
 
   .activity-table td:nth-child(5)::before {
+    content: "Status";
+  }
+
+  .institutions-table td:nth-child(1)::before {
+    content: "Institution";
+  }
+
+  .institutions-table td:nth-child(2)::before {
+    content: "Type";
+  }
+
+  .institutions-table td:nth-child(3)::before {
+    content: "Country";
+  }
+
+  .institutions-table td:nth-child(4)::before {
     content: "Status";
   }
 

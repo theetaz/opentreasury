@@ -4,6 +4,7 @@ import {
   checkCoreApiHealth,
   createTransaction,
   listAuditEvents,
+  listInstitutions,
   listTransactions,
   validateTransaction
 } from "./api";
@@ -11,6 +12,8 @@ import type { AuditEvent, AuditEventListFilter, HealthCheckResult, TransactionLi
 import { prependAuditRow, toAuditRow } from "./audit";
 import type { AuditRow } from "./audit";
 import { toHealthDisplay } from "./health";
+import { toInstitutionRow } from "./institutions";
+import type { InstitutionRow } from "./institutions";
 import {
   HistoryFilterForm,
   RecentEvent,
@@ -47,6 +50,9 @@ export function App() {
   const [auditRows, setAuditRows] = useState<AuditRow[]>([]);
   const [auditStatus, setAuditStatus] = useState<"loading" | "ready" | "error">("loading");
   const [auditError, setAuditError] = useState("");
+  const [institutionRows, setInstitutionRows] = useState<InstitutionRow[]>([]);
+  const [institutionStatus, setInstitutionStatus] = useState<"loading" | "ready" | "error">("loading");
+  const [institutionError, setInstitutionError] = useState("");
   const [healthResult, setHealthResult] = useState<HealthCheckResult | null>(null);
 
   const transaction = useMemo(() => toTransactionPayload(form), [form]);
@@ -85,9 +91,27 @@ export function App() {
     setAuditError(response.error);
   }, []);
 
+  const loadInstitutions = useCallback(async () => {
+    setInstitutionStatus("loading");
+    const response = await listInstitutions({ limit: 5 });
+    if (response.ok) {
+      setInstitutionRows(response.institutions.map(toInstitutionRow));
+      setInstitutionStatus("ready");
+      setInstitutionError("");
+      return;
+    }
+
+    setInstitutionStatus("error");
+    setInstitutionError(response.error);
+  }, []);
+
   useEffect(() => {
     void loadHistory(appliedHistoryFilter);
   }, [appliedHistoryFilter, loadHistory]);
+
+  useEffect(() => {
+    void loadInstitutions();
+  }, [loadInstitutions]);
 
   useEffect(() => {
     void loadAuditTrail();
@@ -203,6 +227,26 @@ export function App() {
             </div>
             <pre className="response-preview">{formatResult(result)}</pre>
 
+            <div className="table-heading" id="institutions">
+              <h2>Institutions</h2>
+              <button className="text-button" type="button" onClick={() => void loadInstitutions()}>
+                Refresh
+              </button>
+            </div>
+            <table className="institutions-table">
+              <thead>
+                <tr>
+                  <th>Institution</th>
+                  <th>Type</th>
+                  <th>Country</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody>
+                <InstitutionRows rows={institutionRows} status={institutionStatus} error={institutionError} />
+              </tbody>
+            </table>
+
             <div className="table-heading">
               <h2>Recent activity</h2>
               <button className="text-button" type="button" onClick={() => void loadHistory(appliedHistoryFilter)}>
@@ -271,6 +315,50 @@ export function App() {
       </main>
     </div>
   );
+}
+
+function InstitutionRows(props: {
+  rows: InstitutionRow[];
+  status: "loading" | "ready" | "error";
+  error: string;
+}) {
+  if (props.status === "loading") {
+    return (
+      <tr>
+        <td colSpan={4}>Loading institutions...</td>
+      </tr>
+    );
+  }
+
+  if (props.status === "error") {
+    return (
+      <tr>
+        <td colSpan={4}>{props.error}</td>
+      </tr>
+    );
+  }
+
+  if (props.rows.length === 0) {
+    return (
+      <tr>
+        <td colSpan={4}>No institutions found.</td>
+      </tr>
+    );
+  }
+
+  return props.rows.map((row) => (
+    <tr key={row.id}>
+      <td>
+        <strong className="entity-name">{row.name}</strong>
+        <span className="entity-id">{row.id}</span>
+      </td>
+      <td>{row.type}</td>
+      <td>{row.countryCode}</td>
+      <td>
+        <span className={`row-status ${row.status.toLowerCase()}`}>{row.status}</span>
+      </td>
+    </tr>
+  ));
 }
 
 function HistoryRows(props: {
