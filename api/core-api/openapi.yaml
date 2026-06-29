@@ -53,6 +53,35 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/institutions:
+    get:
+      operationId: listInstitutions
+      summary: List treasury institutions
+      parameters:
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 50
+          description: Maximum number of institutions to return.
+      responses:
+        "200":
+          description: Treasury institutions ordered by name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListInstitutionsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Institution persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/transactions/validate:
     post:
       operationId: validateTransaction
@@ -222,6 +251,44 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/AuditEvent"
+    ListInstitutionsResponse:
+      type: object
+      required:
+        - institutions
+      properties:
+        institutions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Institution"
+    Institution:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - countryCode
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - MINISTRY
+            - DEPARTMENT
+            - AGENCY
+            - COUNTY
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
     AuditEvent:
       type: object
       required:

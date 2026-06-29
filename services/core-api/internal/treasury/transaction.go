@@ -46,6 +46,18 @@ type ListAuditEventsFilter struct {
 	Limit         int
 }
 
+type Institution struct {
+	ID          string
+	Name        string
+	Type        string
+	CountryCode string
+	Status      string
+}
+
+type ListInstitutionsFilter struct {
+	Limit int
+}
+
 func ValidateTransaction(tx Transaction) error {
 	switch {
 	case tx.ID == "":

@@ -193,6 +193,47 @@ func TestPostgresTransactionRepository_ListAuditEventsReturnsTransactionCreation
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestPostgresInstitutionRepository_ListReturnsInstitutions(t *testing.T) {
+	db, mock := newMockDB(t)
+	repository := NewPostgresInstitutionRepository(db)
+
+	rows := sqlmock.NewRows([]string{
+		"id",
+		"name",
+		"type",
+		"country_code",
+		"status",
+	}).
+		AddRow("minfin", "Ministry of Finance", "MINISTRY", "KE", "ACTIVE")
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT
+			id,
+			name,
+			type,
+			country_code,
+			status
+		FROM treasury_institutions
+		ORDER BY name ASC, id ASC
+		LIMIT $1
+	`)).
+		WithArgs(25).
+		WillReturnRows(rows)
+
+	institutions, err := repository.ListInstitutions(context.Background(), ListInstitutionsFilter{
+		Limit: 25,
+	})
+
+	require.NoError(t, err)
+	require.Len(t, institutions, 1)
+	require.Equal(t, "minfin", institutions[0].ID)
+	require.Equal(t, "Ministry of Finance", institutions[0].Name)
+	require.Equal(t, "MINISTRY", institutions[0].Type)
+	require.Equal(t, "KE", institutions[0].CountryCode)
+	require.Equal(t, "ACTIVE", institutions[0].Status)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func newMockDB(t *testing.T) (*sql.DB, sqlmock.Sqlmock) {
 	t.Helper()
 
