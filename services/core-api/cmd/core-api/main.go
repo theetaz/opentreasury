@@ -53,7 +53,11 @@ func newServer(cfg config, db *sql.DB) *http.Server {
 		httpapi.WithAllowedOrigins(cfg.allowedOrigins),
 	}
 	if db != nil {
-		options = append(options, httpapi.WithTransactionRepository(treasury.NewPostgresTransactionRepository(db)))
+		options = append(
+			options,
+			httpapi.WithTransactionRepository(treasury.NewPostgresTransactionRepository(db)),
+			httpapi.WithInstitutionRepository(treasury.NewPostgresInstitutionRepository(db)),
+		)
 	}
 
 	return &http.Server{

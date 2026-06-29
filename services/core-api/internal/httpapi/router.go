@@ -18,11 +18,16 @@ type AuditEventRepository interface {
 	ListAuditEvents(context.Context, treasury.ListAuditEventsFilter) ([]treasury.AuditEvent, error)
 }
 
+type InstitutionRepository interface {
+	ListInstitutions(context.Context, treasury.ListInstitutionsFilter) ([]treasury.Institution, error)
+}
+
 type RouterOption func(*routerConfig)
 
 type routerConfig struct {
 	transactionRepository TransactionRepository
 	auditEventRepository  AuditEventRepository
+	institutionRepository InstitutionRepository
 	allowedOrigins        map[string]struct{}
 }
 
@@ -38,6 +43,12 @@ func WithTransactionRepository(repository TransactionRepository) RouterOption {
 func WithAuditEventRepository(repository AuditEventRepository) RouterOption {
 	return func(config *routerConfig) {
 		config.auditEventRepository = repository
+	}
+}
+
+func WithInstitutionRepository(repository InstitutionRepository) RouterOption {
+	return func(config *routerConfig) {
+		config.institutionRepository = repository
 	}
 }
 
@@ -61,6 +72,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health)
 	mux.HandleFunc("GET /v1/audit-events", config.listAuditEvents)
+	mux.HandleFunc("GET /v1/institutions", config.listInstitutions)
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
@@ -212,12 +224,40 @@ func (config routerConfig) listAuditEvents(response http.ResponseWriter, request
 	})
 }
 
+func (config routerConfig) listInstitutions(response http.ResponseWriter, request *http.Request) {
+	if config.institutionRepository == nil {
+		writeError(response, http.StatusServiceUnavailable, "institution repository is not configured")
+		return
+	}
+
+	filter, err := parseListInstitutionsFilter(request)
+	if err != nil {
+		writeError(response, http.StatusBadRequest, err.Error())
+		return
+	}
+
+	institutions, err := config.institutionRepository.ListInstitutions(request.Context(), filter)
+	if err != nil {
+		writeError(response, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	response.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(response).Encode(listInstitutionsResponse{
+		Institutions: toInstitutionResponses(institutions),
+	})
+}
+
 type listTransactionsResponse struct {
 	Transactions []transactionResponse `json:"transactions"`
 }
 
 type listAuditEventsResponse struct {
 	Events []auditEventResponse `json:"events"`
+}
+
+type listInstitutionsResponse struct {
+	Institutions []institutionResponse `json:"institutions"`
 }
 
 type transactionResponse struct {
@@ -237,6 +277,14 @@ type auditEventResponse struct {
 	InstitutionID string `json:"institutionId"`
 	OccurredAt    string `json:"occurredAt"`
 	Summary       string `json:"summary"`
+}
+
+type institutionResponse struct {
+	ID          string `json:"id"`
+	Name        string `json:"name"`
+	Type        string `json:"type"`
+	CountryCode string `json:"countryCode"`
+	Status      string `json:"status"`
 }
 
 func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactionsFilter, error) {
@@ -289,6 +337,26 @@ func parseListAuditEventsFilter(request *http.Request) (treasury.ListAuditEvents
 	return filter, nil
 }
 
+func parseListInstitutionsFilter(request *http.Request) (treasury.ListInstitutionsFilter, error) {
+	query := request.URL.Query()
+	filter := treasury.ListInstitutionsFilter{
+		Limit: 50,
+	}
+
+	if limit := query.Get("limit"); limit != "" {
+		value, err := strconv.Atoi(limit)
+		if err != nil || value <= 0 {
+			return treasury.ListInstitutionsFilter{}, treasury.ErrInvalidAmount
+		}
+		if value > 100 {
+			value = 100
+		}
+		filter.Limit = value
+	}
+
+	return filter, nil
+}
+
 func toTransactionResponses(transactions []treasury.Transaction) []transactionResponse {
 	responses := make([]transactionResponse, 0, len(transactions))
 	for _, tx := range transactions {
@@ -316,6 +384,21 @@ func toAuditEventResponses(events []treasury.AuditEvent) []auditEventResponse {
 			InstitutionID: event.InstitutionID,
 			OccurredAt:    event.OccurredAt,
 			Summary:       event.Summary,
+		})
+	}
+
+	return responses
+}
+
+func toInstitutionResponses(institutions []treasury.Institution) []institutionResponse {
+	responses := make([]institutionResponse, 0, len(institutions))
+	for _, institution := range institutions {
+		responses = append(responses, institutionResponse{
+			ID:          institution.ID,
+			Name:        institution.Name,
+			Type:        institution.Type,
+			CountryCode: institution.CountryCode,
+			Status:      institution.Status,
 		})
 	}
 

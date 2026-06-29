@@ -63,6 +63,41 @@ func TestNewServerUsesDatabaseBackedTransactionRepository(t *testing.T) {
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
+func TestNewServerUsesDatabaseBackedInstitutionRepository(t *testing.T) {
+	db, mock := newMockDB(t)
+	server := newServer(config{addr: "127.0.0.1:9090"}, db)
+	request := httptest.NewRequest(http.MethodGet, "/v1/institutions?limit=25", nil)
+	response := httptest.NewRecorder()
+
+	rows := sqlmock.NewRows([]string{
+		"id",
+		"name",
+		"type",
+		"country_code",
+		"status",
+	}).
+		AddRow("minfin", "Ministry of Finance", "MINISTRY", "KE", "ACTIVE")
+
+	mock.ExpectQuery(regexp.QuoteMeta(`
+		SELECT
+			id,
+			name,
+			type,
+			country_code,
+			status
+		FROM treasury_institutions
+		ORDER BY name ASC, id ASC
+		LIMIT $1
+	`)).
+		WithArgs(25).
+		WillReturnRows(rows)
+
+	server.Handler.ServeHTTP(response, request)
+
+	require.Equal(t, http.StatusOK, response.Code)
+	require.NoError(t, mock.ExpectationsWereMet())
+}
+
 func TestLoadConfigUsesConfiguredAddress(t *testing.T) {
 	t.Setenv("OPENTREASURY_CORE_API_ADDR", "127.0.0.1:0")
 
