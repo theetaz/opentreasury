@@ -42,6 +42,16 @@ describe("toTransactionListFilter", () => {
       })
     ).toEqual({});
   });
+
+  it("caps limit at the API maximum of 100", () => {
+    expect(
+      toTransactionListFilter({
+        institutionId: "",
+        fiscalYear: "",
+        limit: "500"
+      })
+    ).toEqual({ limit: 100 });
+  });
 });
 
 describe("formatTransactionAmount", () => {

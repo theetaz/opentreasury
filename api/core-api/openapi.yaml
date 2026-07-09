@@ -2,7 +2,19 @@ openapi: 3.1.0
 info:
   title: OpenTreasury Core API
   version: 0.1.0
-  description: Core treasury transaction API for OpenTreasury.
+  description: >-
+    Core treasury transaction API for OpenTreasury.
+
+
+    Conventions: every error response uses the ErrorResponse envelope. Internal
+    failures return a sanitized `internal server error` message (details are
+    logged server-side with the request ID, never returned). All responses
+    carry an `X-Request-ID` header — clients may supply their own. `limit`
+    parameters are validated strictly: values outside 1..100 are rejected with
+    400 rather than silently clamped. Request bodies above 1 MiB are rejected
+    with 413. Cross-origin requests are allowed only for origins configured via
+    `OPENTREASURY_ALLOWED_ORIGINS` (methods GET, POST, OPTIONS; header
+    Content-Type).
 servers:
   - url: http://localhost:8080
 paths:
@@ -68,6 +80,8 @@ paths:
                 $ref: "#/components/schemas/ListAuditEventsResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "503":
           description: Audit event persistence is not available.
           content:
@@ -97,6 +111,8 @@ paths:
                 $ref: "#/components/schemas/ListInstitutionsResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "503":
           description: Institution persistence is not available.
           content:
@@ -122,6 +138,8 @@ paths:
                 $ref: "#/components/schemas/ValidationResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
   /v1/transactions:
     get:
       operationId: listTransactions
@@ -159,6 +177,8 @@ paths:
                 $ref: "#/components/schemas/ListTransactionsResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "503":
           description: Transaction persistence is not available.
           content:
@@ -183,6 +203,22 @@ paths:
                 $ref: "#/components/schemas/CreateTransactionResponse"
         "400":
           $ref: "#/components/responses/BadRequest"
+        "409":
+          description: A transaction with the same identifier already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          description: The referenced institution does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
         "503":
           description: Transaction persistence is not available.
           content:
@@ -193,6 +229,21 @@ components:
   responses:
     BadRequest:
       description: Request payload is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: >-
+        Unexpected server failure. The message is always the sanitized string
+        `internal server error`; diagnostic detail is available to operators
+        via server logs keyed by the X-Request-ID header.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PayloadTooLarge:
+      description: Request body exceeds the 1 MiB limit.
       content:
         application/json:
           schema:

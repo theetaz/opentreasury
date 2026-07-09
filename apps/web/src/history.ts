@@ -49,7 +49,8 @@ export function toTransactionListFilter(form: HistoryFilterForm): TransactionLis
   }
 
   if (Number.isInteger(limit) && limit > 0) {
-    filter.limit = limit;
+    // The API rejects limits above 100 (ADR-0002); cap in the form layer.
+    filter.limit = Math.min(limit, 100);
   }
 
   return filter;
