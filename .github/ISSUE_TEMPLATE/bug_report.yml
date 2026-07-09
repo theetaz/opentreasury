@@ -1,0 +1,44 @@
+name: Bug report
+description: Something is broken or behaves contrary to documentation
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Security issue?** Do NOT file it here — report privately via
+        [Security Advisories](https://github.com/theetaz/opentreasury/security/advisories/new). See SECURITY.md.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, what happened instead?
+      placeholder: Steps to reproduce, expected vs actual behavior
+    validations:
+      required: true
+  - type: dropdown
+    id: component
+    attributes:
+      label: Component
+      options:
+        - core-api
+        - web app
+        - mobile app
+        - connectors / ingestion
+        - ledger-gateway / chaincode
+        - mcp-server
+        - database / migrations
+        - infra / CI
+        - docs
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      placeholder: OS, Go/Node versions, docker compose vs manual, commit SHA
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: Redact anything sensitive before pasting.
+      render: shell
