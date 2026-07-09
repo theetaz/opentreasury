@@ -1,3 +1,3 @@
 module github.com/opentreasury/opentreasury/chaincode/treasury
 
-go 1.22
+go 1.25

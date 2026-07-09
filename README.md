@@ -66,7 +66,7 @@ OpenTreasury is in early project scaffolding. The current repository provides th
 
 Prerequisites:
 
-- Go 1.22 or newer.
+- Go 1.25 or newer.
 - Node.js 20 or newer.
 - pnpm 9 or newer.
 - Docker and Docker Compose.
