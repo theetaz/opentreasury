@@ -12,6 +12,7 @@ import (
 	"time"
 
 	"github.com/opentreasury/opentreasury/services/core-api/internal/auth"
+	"github.com/opentreasury/opentreasury/services/core-api/internal/authz"
 	"github.com/opentreasury/opentreasury/services/core-api/internal/treasury"
 )
 
@@ -42,6 +43,9 @@ type routerConfig struct {
 	journalRepository     JournalRepository
 	tokenVerifier         auth.TokenVerifier
 	authorizer            Authorizer
+	publication           *authz.Publication
+	publicRateRPS         float64
+	publicRateBurst       int
 	allowedOrigins        map[string]struct{}
 	logger                *slog.Logger
 	readinessChecks       []func(context.Context) error
@@ -142,6 +146,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
+	config.registerPublicRoutes(mux)
 
 	var handler http.Handler = mux
 	if config.tokenVerifier != nil {
