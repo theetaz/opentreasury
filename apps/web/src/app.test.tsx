@@ -95,6 +95,16 @@ describe("journal and balances", () => {
   });
 });
 
+describe("ingestion", () => {
+  it("lists imported records and surfaces quarantine reasons", async () => {
+    renderApp("/ingestion?status=QUARANTINED");
+
+    expect(await screen.findByRole("heading", { name: /ingestion/i })).toBeInTheDocument();
+    expect(await screen.findByText("PAY-2026-1005")).toBeInTheDocument();
+    expect(screen.queryByText("PAY-2026-1001")).not.toBeInTheDocument();
+  });
+});
+
 describe("chart of accounts", () => {
   it("renders the reference accounts and filters by type from the URL", async () => {
     renderApp("/accounts?accountType=LIABILITY");

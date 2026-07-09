@@ -26,6 +26,14 @@ allow if {
 	role == "auditor"
 }
 
+# Connectors are the trusted ingestion path: they may submit and read
+# staging records for any institution, and nothing else.
+allow if {
+	some role in input.principal.roles
+	role == "connector"
+	input.resource == "staging"
+}
+
 # Institution users may act only within their own institution. The chart of
 # accounts is shared reference data, so it is readable regardless of scope.
 allow if {

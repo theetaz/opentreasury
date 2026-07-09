@@ -15,6 +15,7 @@ const titles: Record<string, string> = {
   "/accounts": "Chart of accounts",
   "/journal": "Journal",
   "/balances": "Balances",
+  "/ingestion": "Ingestion",
   "/institutions": "Institutions",
   "/audit": "Audit trail"
 };

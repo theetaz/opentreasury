@@ -174,6 +174,32 @@ export type BalanceListResult =
   | { ok: true; balances: Balance[]; pagination: PageInfo }
   | { ok: false; error: string };
 
+export type StagingRecord = {
+  id: string;
+  sourceSystem: string;
+  sourceRef: string;
+  profile: string;
+  institutionId: string;
+  occurredAt: string;
+  status: "POSTED" | "QUARANTINED";
+  reason?: string;
+  entryId?: string;
+  createdAt: string;
+  lines: JournalLine[];
+};
+
+export type StagingListFilter = {
+  status?: string;
+  institutionId?: string;
+  sourceSystem?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type StagingListResult =
+  | { ok: true; records: StagingRecord[]; pagination: PageInfo }
+  | { ok: false; error: string };
+
 export type HealthCheckResult =
   | { ok: true; responseTimeMs: number; checkedAt: string }
   | { ok: false; error: string; checkedAt: string };
@@ -189,6 +215,11 @@ const simulatedAccounts: Account[] = [
   { code: "6202", name: "Currency and deposits", accountType: "ASSET", parentCode: "62", gfsmCode: "6202", active: true, depth: 1 },
   { code: "63", name: "Liabilities", accountType: "LIABILITY", gfsmCode: "63", active: true, depth: 0 },
   { code: "6", name: "Net worth", accountType: "NET_WORTH", gfsmCode: "6", active: true, depth: 0 }
+];
+
+const simulatedStaging: StagingRecord[] = [
+  { id: "sr-1", sourceSystem: "itmis", sourceRef: "PAY-2026-1001", profile: "itmis@1", institutionId: "minfin", occurredAt: "2026-07-01", status: "POSTED", entryId: "itmis-PAY-2026-1001", createdAt: "2026-07-09T12:00:00Z", lines: [{ accountCode: "22", direction: "DEBIT", amountMinor: 125050, currency: "USD" }, { accountCode: "6202", direction: "CREDIT", amountMinor: 125050, currency: "USD" }] },
+  { id: "sr-2", sourceSystem: "itmis", sourceRef: "PAY-2026-1005", profile: "itmis@1", institutionId: "ghost-ministry", occurredAt: "2026-07-03", status: "QUARANTINED", reason: "institution does not exist", createdAt: "2026-07-09T12:01:00Z", lines: [{ accountCode: "22", direction: "DEBIT", amountMinor: 9900, currency: "USD" }, { accountCode: "6202", direction: "CREDIT", amountMinor: 9900, currency: "USD" }] }
 ];
 
 const simulatedEntries: JournalEntry[] = [
@@ -575,6 +606,44 @@ export async function listBalances(filter: BalanceListFilter = {}): Promise<Bala
       ok: true,
       balances: body.balances ?? [],
       pagination: body.pagination ?? fallbackPageInfo(filter, body.balances?.length ?? 0)
+    };
+  } catch {
+    return { ok: false, error: "Core API is not reachable" };
+  }
+}
+
+export function buildStagingPath(filter: StagingListFilter = {}): string {
+  const params = new URLSearchParams();
+  if (filter.status) params.set("status", filter.status);
+  if (filter.institutionId) params.set("institutionId", filter.institutionId);
+  if (filter.sourceSystem) params.set("sourceSystem", filter.sourceSystem);
+  if (filter.page) params.set("page", String(filter.page));
+  if (filter.pageSize) params.set("pageSize", String(filter.pageSize));
+  const query = params.toString();
+  return query ? `/v1/staging-records?${query}` : "/v1/staging-records";
+}
+
+export async function listStagingRecords(filter: StagingListFilter = {}): Promise<StagingListResult> {
+  if (!apiBaseUrl) {
+    const matches = simulatedStaging
+      .filter((r) => !filter.status || r.status === filter.status)
+      .filter((r) => !filter.institutionId || r.institutionId === filter.institutionId)
+      .filter((r) => !filter.sourceSystem || r.sourceSystem === filter.sourceSystem);
+    const { rows, pagination } = paginate(matches, pageWindow(filter));
+    return { ok: true, records: rows, pagination };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${buildStagingPath(filter)}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { records?: StagingRecord[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      records: body.records ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.records?.length ?? 0)
     };
   } catch {
     return { ok: false, error: "Core API is not reachable" };

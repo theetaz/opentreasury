@@ -29,6 +29,8 @@ func resourceForPath(path string) string {
 		return "institutions"
 	case strings.HasPrefix(path, "/v1/audit-events"):
 		return "audit-events"
+	case strings.HasPrefix(path, "/v1/staging-records"):
+		return "staging"
 	default:
 		return ""
 	}

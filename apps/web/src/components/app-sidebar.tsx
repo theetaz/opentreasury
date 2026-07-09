@@ -1,4 +1,4 @@
-import { BookOpenCheck, BookText, Building2, LayoutDashboard, ListChecks, Scale, ScrollText, ShieldCheck } from "lucide-react";
+import { BookOpenCheck, BookText, Building2, LayoutDashboard, ListChecks, PlugZap, Scale, ScrollText, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import {
   Sidebar,
@@ -18,6 +18,7 @@ const items = [
   { title: "Accounts", url: "/accounts", icon: BookOpenCheck },
   { title: "Journal", url: "/journal", icon: BookText },
   { title: "Balances", url: "/balances", icon: Scale },
+  { title: "Ingestion", url: "/ingestion", icon: PlugZap },
   { title: "Institutions", url: "/institutions", icon: Building2 },
   { title: "Audit trail", url: "/audit", icon: ScrollText }
 ];

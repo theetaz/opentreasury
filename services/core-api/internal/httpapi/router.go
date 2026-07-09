@@ -41,6 +41,7 @@ type routerConfig struct {
 	institutionRepository InstitutionRepository
 	accountRepository     AccountRepository
 	journalRepository     JournalRepository
+	stagingRepository     StagingRepository
 	tokenVerifier         auth.TokenVerifier
 	authorizer            Authorizer
 	publication           *authz.Publication
@@ -146,6 +147,8 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
+	mux.HandleFunc("POST /v1/staging-records", config.submitStagingRecords)
+	mux.HandleFunc("GET /v1/staging-records", config.listStagingRecords)
 	config.registerPublicRoutes(mux)
 
 	var handler http.Handler = mux

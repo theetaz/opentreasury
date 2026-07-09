@@ -105,6 +105,22 @@ services:
     depends_on:
       - core-api
 
+  generic-file-connector:
+    build:
+      context: ../../services/connectors/generic-file
+    container_name: opentreasury-connector
+    environment:
+      OPENTREASURY_DROP_DIR: /dropbox
+      OPENTREASURY_PROFILE_PATH: /profiles/itmis-payments.yaml
+      OPENTREASURY_STAGING_URL: http://core-api:8080
+      OPENTREASURY_TOKEN_URL: http://keycloak:8080/realms/opentreasury/protocol/openid-connect/token
+      OPENTREASURY_CLIENT_ID: opentreasury-connector
+      OPENTREASURY_CLIENT_SECRET: connector-secret
+    volumes:
+      - ../../services/connectors/generic-file/dropbox:/dropbox
+    depends_on:
+      - core-api
+
   web:
     build:
       context: ../..

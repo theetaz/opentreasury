@@ -23,6 +23,7 @@ func TestAuthorizationDecisionMatrix(t *testing.T) {
 	treasury := auth.Principal{Subject: "t", Roles: []string{"treasury-admin"}}
 	auditor := auth.Principal{Subject: "a", Roles: []string{"auditor"}}
 	minfin := auth.Principal{Subject: "i", Roles: []string{"institution-user"}, InstitutionID: "minfin"}
+	connector := auth.Principal{Subject: "c", Roles: []string{"connector"}}
 
 	cases := []struct {
 		name      string
@@ -43,6 +44,10 @@ func TestAuthorizationDecisionMatrix(t *testing.T) {
 		{"institution user reads shared accounts", minfin, "read", "accounts", "", true},
 		{"institution user reads unscoped list", minfin, "read", "balances", "", true},
 		{"anonymous is denied", auth.Principal{}, "read", "balances", "minfin", false},
+		{"connector submits staging for any institution", connector, "write", "staging", "health", true},
+		{"connector reads staging", connector, "read", "staging", "", true},
+		{"connector cannot write the journal directly", connector, "write", "journal", "minfin", false},
+		{"connector cannot read balances", connector, "read", "balances", "", false},
 	}
 
 	for _, testCase := range cases {
