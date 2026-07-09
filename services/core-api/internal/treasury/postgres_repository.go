@@ -81,21 +81,26 @@ func (repository *PostgresTransactionRepository) Save(ctx context.Context, tx Tr
 // mapSaveError converts constraint violations into domain errors the HTTP
 // layer can translate into meaningful status codes.
 func mapSaveError(transactionID string, err error) error {
-	if err == nil {
+	switch {
+	case err == nil:
 		return nil
-	}
-
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
-		switch pgErr.Code {
-		case pgUniqueViolation:
-			return fmt.Errorf("saving transaction %q: %w", transactionID, ErrDuplicateTransaction)
-		case pgForeignKeyViolation:
-			return fmt.Errorf("saving transaction %q: %w", transactionID, ErrUnknownInstitution)
-		}
+	case isUniqueViolation(err):
+		return fmt.Errorf("saving transaction %q: %w", transactionID, ErrDuplicateTransaction)
+	case isForeignKeyViolation(err):
+		return fmt.Errorf("saving transaction %q: %w", transactionID, ErrUnknownInstitution)
 	}
 
 	return err
+}
+
+func isUniqueViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgUniqueViolation
+}
+
+func isForeignKeyViolation(err error) bool {
+	var pgErr *pgconn.PgError
+	return errors.As(err, &pgErr) && pgErr.Code == pgForeignKeyViolation
 }
 
 func (repository *PostgresTransactionRepository) List(ctx context.Context, filter ListTransactionsFilter) (TransactionPage, error) {

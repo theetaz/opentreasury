@@ -112,6 +112,68 @@ export type AccountListResult =
   | { ok: true; accounts: Account[]; pagination: PageInfo }
   | { ok: false; error: string };
 
+export type JournalLine = {
+  accountCode: string;
+  direction: "DEBIT" | "CREDIT";
+  amountMinor: number;
+  currency: string;
+};
+
+export type JournalEntry = {
+  id: string;
+  institutionId: string;
+  fiscalYear: number;
+  effectiveDate: string;
+  description: string;
+  status: "POSTED" | "REVERSED";
+  entryType: "STANDARD" | "REVERSAL";
+  reversesEntryId?: string;
+  lines: JournalLine[];
+};
+
+export type JournalEntryInput = {
+  id: string;
+  institutionId: string;
+  fiscalYear: number;
+  effectiveDate: string;
+  description: string;
+  lines: JournalLine[];
+};
+
+export type JournalEntryListFilter = {
+  institutionId?: string;
+  fiscalYear?: number;
+  status?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type JournalEntryListResult =
+  | { ok: true; entries: JournalEntry[]; pagination: PageInfo }
+  | { ok: false; error: string };
+
+export type Balance = {
+  institutionId: string;
+  accountCode: string;
+  accountName?: string;
+  accountType?: string;
+  currency: string;
+  balanceMinor: number;
+};
+
+export type BalanceListFilter = {
+  institutionId?: string;
+  accountCode?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type BalanceListResult =
+  | { ok: true; balances: Balance[]; pagination: PageInfo }
+  | { ok: false; error: string };
+
 export type HealthCheckResult =
   | { ok: true; responseTimeMs: number; checkedAt: string }
   | { ok: false; error: string; checkedAt: string };
@@ -127,6 +189,41 @@ const simulatedAccounts: Account[] = [
   { code: "6202", name: "Currency and deposits", accountType: "ASSET", parentCode: "62", gfsmCode: "6202", active: true, depth: 1 },
   { code: "63", name: "Liabilities", accountType: "LIABILITY", gfsmCode: "63", active: true, depth: 0 },
   { code: "6", name: "Net worth", accountType: "NET_WORTH", gfsmCode: "6", active: true, depth: 0 }
+];
+
+const simulatedEntries: JournalEntry[] = [
+  {
+    id: "je-2026-0001",
+    institutionId: "minfin",
+    fiscalYear: 2026,
+    effectiveDate: "2026-06-28",
+    description: "Tax receipt into the treasury account",
+    status: "POSTED",
+    entryType: "STANDARD",
+    lines: [
+      { accountCode: "6202", direction: "DEBIT", amountMinor: 125000, currency: "USD" },
+      { accountCode: "114", direction: "CREDIT", amountMinor: 125000, currency: "USD" }
+    ]
+  },
+  {
+    id: "je-2026-0002",
+    institutionId: "minfin",
+    fiscalYear: 2026,
+    effectiveDate: "2026-06-29",
+    description: "Office supplies purchase",
+    status: "POSTED",
+    entryType: "STANDARD",
+    lines: [
+      { accountCode: "22", direction: "DEBIT", amountMinor: 4000, currency: "USD" },
+      { accountCode: "6202", direction: "CREDIT", amountMinor: 4000, currency: "USD" }
+    ]
+  }
+];
+
+const simulatedBalances: Balance[] = [
+  { institutionId: "minfin", accountCode: "114", accountName: "Taxes on goods and services", accountType: "REVENUE", currency: "USD", balanceMinor: -125000 },
+  { institutionId: "minfin", accountCode: "22", accountName: "Use of goods and services", accountType: "EXPENSE", currency: "USD", balanceMinor: 4000 },
+  { institutionId: "minfin", accountCode: "6202", accountName: "Currency and deposits", accountType: "ASSET", currency: "USD", balanceMinor: 121000 }
 ];
 
 const apiBaseUrl = import.meta.env.VITE_CORE_API_URL;
@@ -367,6 +464,109 @@ export async function listAccounts(filter: AccountListFilter = {}): Promise<Acco
       ok: true,
       accounts: body.accounts ?? [],
       pagination: body.pagination ?? fallbackPageInfo(filter, body.accounts?.length ?? 0)
+    };
+  } catch {
+    return { ok: false, error: "Core API is not reachable" };
+  }
+}
+
+export function buildJournalEntriesPath(filter: JournalEntryListFilter = {}): string {
+  const params = new URLSearchParams();
+  if (filter.institutionId) params.set("institutionId", filter.institutionId);
+  if (filter.fiscalYear) params.set("fiscalYear", String(filter.fiscalYear));
+  if (filter.status) params.set("status", filter.status);
+  if (filter.dateFrom) params.set("dateFrom", filter.dateFrom);
+  if (filter.dateTo) params.set("dateTo", filter.dateTo);
+  if (filter.page) params.set("page", String(filter.page));
+  if (filter.pageSize) params.set("pageSize", String(filter.pageSize));
+  const query = params.toString();
+  return query ? `/v1/journal-entries?${query}` : "/v1/journal-entries";
+}
+
+export async function listJournalEntries(filter: JournalEntryListFilter = {}): Promise<JournalEntryListResult> {
+  if (!apiBaseUrl) {
+    const matches = simulatedEntries
+      .filter((e) => !filter.institutionId || e.institutionId === filter.institutionId)
+      .filter((e) => !filter.fiscalYear || e.fiscalYear === filter.fiscalYear)
+      .filter((e) => !filter.status || e.status === filter.status)
+      .filter((e) => !filter.dateFrom || e.effectiveDate >= filter.dateFrom)
+      .filter((e) => !filter.dateTo || e.effectiveDate <= filter.dateTo);
+    const { rows, pagination } = paginate(matches, pageWindow(filter));
+    return { ok: true, entries: rows, pagination };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${buildJournalEntriesPath(filter)}`);
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { entries?: JournalEntry[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      entries: body.entries ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.entries?.length ?? 0)
+    };
+  } catch {
+    return { ok: false, error: "Core API is not reachable" };
+  }
+}
+
+export async function postJournalEntry(entry: JournalEntryInput): Promise<ApiResult> {
+  if (!apiBaseUrl) {
+    const debits = entry.lines.filter((l) => l.direction === "DEBIT").reduce((sum, l) => sum + l.amountMinor, 0);
+    const credits = entry.lines.filter((l) => l.direction === "CREDIT").reduce((sum, l) => sum + l.amountMinor, 0);
+    if (entry.lines.length < 2) return { ok: false, status: 400, error: "a journal entry needs at least two lines" };
+    if (debits !== credits) return { ok: false, status: 400, error: "entry debits and credits are not balanced per currency" };
+    return { ok: true, status: 201, data: { id: entry.id } };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/journal-entries`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(entry)
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, status: response.status, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    return { ok: true, status: response.status, data: await response.json().catch(() => undefined) };
+  } catch {
+    return { ok: false, status: 0, error: "Core API is not reachable" };
+  }
+}
+
+export function buildBalancesPath(filter: BalanceListFilter = {}): string {
+  const params = new URLSearchParams();
+  if (filter.institutionId) params.set("institutionId", filter.institutionId);
+  if (filter.accountCode) params.set("accountCode", filter.accountCode);
+  if (filter.page) params.set("page", String(filter.page));
+  if (filter.pageSize) params.set("pageSize", String(filter.pageSize));
+  const query = params.toString();
+  return query ? `/v1/balances?${query}` : "/v1/balances";
+}
+
+export async function listBalances(filter: BalanceListFilter = {}): Promise<BalanceListResult> {
+  if (!apiBaseUrl) {
+    const matches = simulatedBalances
+      .filter((b) => !filter.institutionId || b.institutionId === filter.institutionId)
+      .filter((b) => !filter.accountCode || b.accountCode === filter.accountCode);
+    const { rows, pagination } = paginate(matches, pageWindow(filter));
+    return { ok: true, balances: rows, pagination };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${buildBalancesPath(filter)}`);
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { balances?: Balance[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      balances: body.balances ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.balances?.length ?? 0)
     };
   } catch {
     return { ok: false, error: "Core API is not reachable" };

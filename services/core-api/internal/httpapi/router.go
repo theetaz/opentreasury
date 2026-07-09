@@ -37,6 +37,7 @@ type routerConfig struct {
 	auditEventRepository  AuditEventRepository
 	institutionRepository InstitutionRepository
 	accountRepository     AccountRepository
+	journalRepository     JournalRepository
 	allowedOrigins        map[string]struct{}
 	logger                *slog.Logger
 	readinessChecks       []func(context.Context) error
@@ -111,6 +112,9 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("GET /healthz", health)
 	mux.HandleFunc("GET /readyz", config.readiness)
 	mux.HandleFunc("GET /v1/accounts", config.listAccounts)
+	mux.HandleFunc("GET /v1/balances", config.listBalances)
+	mux.HandleFunc("POST /v1/journal-entries", config.postJournalEntry)
+	mux.HandleFunc("GET /v1/journal-entries", config.listJournalEntries)
 	mux.HandleFunc("GET /v1/audit-events", config.listAuditEvents)
 	mux.HandleFunc("GET /v1/institutions", config.listInstitutions)
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)
@@ -413,6 +417,16 @@ const (
 	maxListLimit    = 100
 	defaultPageSize = 15
 )
+
+var errInvalidPositiveInt = errors.New("invalid value")
+
+func parsePositiveInt(raw string) (int, error) {
+	value, err := strconv.Atoi(raw)
+	if err != nil || value <= 0 {
+		return 0, errInvalidPositiveInt
+	}
+	return value, nil
+}
 
 // parseLimit enforces the documented 1..100 range strictly; out-of-range
 // values are rejected rather than silently clamped (ADR-0002).
