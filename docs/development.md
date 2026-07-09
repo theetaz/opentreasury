@@ -20,6 +20,21 @@ make verify
 suite (requires Docker — it starts throwaway Postgres containers via
 testcontainers), and the web app tests + typechecks.
 
+## Full Local Stack (one command)
+
+```sh
+make up
+```
+
+Builds and starts everything in Docker: Postgres, migrations, seed data, the
+core API, and the web app.
+
+- Dashboard (UAT): **http://localhost:5173**
+- Core API: **http://localhost:8080** (`/healthz`, `/v1/...`)
+
+`make down` stops the stack; `make db-reset` wipes the data volume and
+re-seeds.
+
 ## Local Database
 
 PostgreSQL runs in Docker via `infra/docker/docker-compose.yaml`:
