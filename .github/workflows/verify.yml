@@ -14,10 +14,39 @@ permissions:
   contents: read
 
 jobs:
-  verify:
-    name: Verify
+  lint:
+    name: Lint
     runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
 
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: |
+            services/**/go.sum
+            workers/**/go.sum
+            chaincode/**/go.sum
+
+      - name: gofmt
+        run: |
+          unformatted=$(gofmt -l services workers chaincode)
+          if [ -n "$unformatted" ]; then
+            echo "gofmt violations:" && echo "$unformatted"
+            exit 1
+          fi
+
+      - name: golangci-lint (core-api)
+        uses: golangci/golangci-lint-action@v7
+        with:
+          version: v2.6.2
+          working-directory: services/core-api
+
+  test:
+    name: Test
+    runs-on: ubuntu-latest
     steps:
       - name: Check out repository
         uses: actions/checkout@v4
@@ -47,3 +76,51 @@ jobs:
 
       - name: Verify
         run: make verify
+
+      - name: Validate compose config
+        run: make verify-compose
+
+  security:
+    name: Security scans
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.25"
+          cache-dependency-path: |
+            services/**/go.sum
+            workers/**/go.sum
+            chaincode/**/go.sum
+
+      - name: govulncheck
+        run: |
+          go install golang.org/x/vuln/cmd/govulncheck@latest
+          for mod in services/core-api services/connectors/generic-file services/ledger-gateway services/mcp-server workers/treasury-worker chaincode/treasury; do
+            echo "==> govulncheck in $mod"
+            (cd "$mod" && govulncheck ./...)
+          done
+
+      - name: gitleaks
+        uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Set up pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.4
+          run_install: false
+
+      - name: pnpm audit (production dependencies)
+        run: pnpm audit --prod --audit-level high

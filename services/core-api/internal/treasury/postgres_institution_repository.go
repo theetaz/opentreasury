@@ -30,7 +30,7 @@ func (repository *PostgresInstitutionRepository) ListInstitutions(ctx context.Co
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var institutions []Institution
 	for rows.Next() {
