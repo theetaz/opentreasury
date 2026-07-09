@@ -3,11 +3,18 @@ package httpapi
 import (
 	"context"
 	"encoding/json"
+	"errors"
+	"log/slog"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/opentreasury/opentreasury/services/core-api/internal/treasury"
 )
+
+const defaultMaxBodyBytes int64 = 1 << 20 // 1 MiB
+
+const readinessCheckTimeout = 2 * time.Second
 
 type TransactionRepository interface {
 	Save(context.Context, treasury.Transaction) error
@@ -29,6 +36,9 @@ type routerConfig struct {
 	auditEventRepository  AuditEventRepository
 	institutionRepository InstitutionRepository
 	allowedOrigins        map[string]struct{}
+	logger                *slog.Logger
+	readinessChecks       []func(context.Context) error
+	maxBodyBytes          int64
 }
 
 func WithTransactionRepository(repository TransactionRepository) RouterOption {
@@ -52,6 +62,29 @@ func WithInstitutionRepository(repository InstitutionRepository) RouterOption {
 	}
 }
 
+// WithLogger sets the structured logger used for request, error, and panic
+// logging. Defaults to slog.Default().
+func WithLogger(logger *slog.Logger) RouterOption {
+	return func(config *routerConfig) {
+		config.logger = logger
+	}
+}
+
+// WithReadinessCheck registers a dependency probe consulted by GET /readyz.
+// Any failing check makes readiness report 503.
+func WithReadinessCheck(check func(context.Context) error) RouterOption {
+	return func(config *routerConfig) {
+		config.readinessChecks = append(config.readinessChecks, check)
+	}
+}
+
+// WithMaxBodyBytes caps request body size; larger bodies are rejected with 413.
+func WithMaxBodyBytes(limit int64) RouterOption {
+	return func(config *routerConfig) {
+		config.maxBodyBytes = limit
+	}
+}
+
 func WithAllowedOrigins(origins []string) RouterOption {
 	return func(config *routerConfig) {
 		config.allowedOrigins = make(map[string]struct{}, len(origins))
@@ -64,19 +97,29 @@ func WithAllowedOrigins(origins []string) RouterOption {
 }
 
 func NewRouter(options ...RouterOption) http.Handler {
-	config := routerConfig{}
+	config := routerConfig{
+		logger:       slog.Default(),
+		maxBodyBytes: defaultMaxBodyBytes,
+	}
 	for _, option := range options {
 		option(&config)
 	}
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health)
+	mux.HandleFunc("GET /readyz", config.readiness)
 	mux.HandleFunc("GET /v1/audit-events", config.listAuditEvents)
 	mux.HandleFunc("GET /v1/institutions", config.listInstitutions)
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
-	return config.withCORS(mux)
+
+	var handler http.Handler = config.withCORS(mux)
+	handler = withMaxBodyBytes(config.maxBodyBytes, handler)
+	handler = withRecovery(config.logger, handler)
+	handler = withRequestLogging(config.logger, handler)
+	handler = withRequestID(handler)
+	return handler
 }
 
 func (config routerConfig) withCORS(next http.Handler) http.Handler {
@@ -109,10 +152,59 @@ func health(response http.ResponseWriter, request *http.Request) {
 	})
 }
 
+func (config routerConfig) readiness(response http.ResponseWriter, request *http.Request) {
+	ctx, cancel := context.WithTimeout(request.Context(), readinessCheckTimeout)
+	defer cancel()
+
+	for _, check := range config.readinessChecks {
+		if err := check(ctx); err != nil {
+			config.logger.Error("readiness check failed",
+				"request_id", requestIDFromContext(request.Context()),
+				"error", err,
+			)
+			response.Header().Set("Content-Type", "application/json")
+			response.WriteHeader(http.StatusServiceUnavailable)
+			_ = json.NewEncoder(response).Encode(map[string]string{"status": "unavailable"})
+			return
+		}
+	}
+
+	response.Header().Set("Content-Type", "application/json")
+	_ = json.NewEncoder(response).Encode(map[string]string{"status": "ready"})
+}
+
+// decodeRequestBody decodes JSON, mapping oversized bodies to 413 and other
+// decode failures to 400. Returns false if a response was already written.
+func decodeRequestBody(response http.ResponseWriter, request *http.Request, target any) bool {
+	if err := json.NewDecoder(request.Body).Decode(target); err != nil {
+		var maxBytesErr *http.MaxBytesError
+		if errors.As(err, &maxBytesErr) {
+			writeError(response, http.StatusRequestEntityTooLarge, "request body too large")
+			return false
+		}
+
+		writeError(response, http.StatusBadRequest, "invalid JSON")
+		return false
+	}
+
+	return true
+}
+
+// internalError logs the real error for operators and returns a sanitized
+// message to the client. Internal details must never reach response bodies.
+func (config routerConfig) internalError(response http.ResponseWriter, request *http.Request, err error) {
+	config.logger.Error("internal error",
+		"request_id", requestIDFromContext(request.Context()),
+		"method", request.Method,
+		"path", request.URL.Path,
+		"error", err,
+	)
+	writeError(response, http.StatusInternalServerError, "internal server error")
+}
+
 func validateTransaction(response http.ResponseWriter, request *http.Request) {
 	var tx treasury.Transaction
-	if err := json.NewDecoder(request.Body).Decode(&tx); err != nil {
-		writeError(response, http.StatusBadRequest, "invalid JSON")
+	if !decodeRequestBody(response, request, &tx) {
 		return
 	}
 
@@ -149,8 +241,7 @@ type validationResponse struct {
 
 func (config routerConfig) createTransaction(response http.ResponseWriter, request *http.Request) {
 	var tx treasury.Transaction
-	if err := json.NewDecoder(request.Body).Decode(&tx); err != nil {
-		writeError(response, http.StatusBadRequest, "invalid JSON")
+	if !decodeRequestBody(response, request, &tx) {
 		return
 	}
 
@@ -165,7 +256,7 @@ func (config routerConfig) createTransaction(response http.ResponseWriter, reque
 	}
 
 	if err := config.transactionRepository.Save(request.Context(), tx); err != nil {
-		writeError(response, http.StatusInternalServerError, err.Error())
+		config.internalError(response, request, err)
 		return
 	}
 
@@ -190,7 +281,7 @@ func (config routerConfig) listTransactions(response http.ResponseWriter, reques
 
 	transactions, err := config.transactionRepository.List(request.Context(), filter)
 	if err != nil {
-		writeError(response, http.StatusInternalServerError, err.Error())
+		config.internalError(response, request, err)
 		return
 	}
 
@@ -214,7 +305,7 @@ func (config routerConfig) listAuditEvents(response http.ResponseWriter, request
 
 	events, err := config.auditEventRepository.ListAuditEvents(request.Context(), filter)
 	if err != nil {
-		writeError(response, http.StatusInternalServerError, err.Error())
+		config.internalError(response, request, err)
 		return
 	}
 
@@ -238,7 +329,7 @@ func (config routerConfig) listInstitutions(response http.ResponseWriter, reques
 
 	institutions, err := config.institutionRepository.ListInstitutions(request.Context(), filter)
 	if err != nil {
-		writeError(response, http.StatusInternalServerError, err.Error())
+		config.internalError(response, request, err)
 		return
 	}
 
