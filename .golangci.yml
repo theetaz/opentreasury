@@ -1,0 +1,23 @@
+version: "2"
+
+linters:
+  default: standard
+  enable:
+    - gosec
+    - misspell
+    - sqlclosecheck
+    - unconvert
+    - unparam
+  exclusions:
+    rules:
+      # Test helpers legitimately use weak randomness, fixed creds, etc.
+      - path: _test\.go
+        linters:
+          - gosec
+      # G202 flags any SQL string concatenation. The repository query builders
+      # concatenate only static clause fragments with numbered placeholders
+      # ($1, $2, ...); every value travels as a bound parameter.
+      - path: internal/treasury/postgres_.*\.go
+        text: "G202"
+        linters:
+          - gosec

@@ -80,7 +80,7 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var transactions []Transaction
 	for rows.Next() {
@@ -139,7 +139,7 @@ func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Con
 	if err != nil {
 		return nil, err
 	}
-	defer rows.Close()
+	defer func() { _ = rows.Close() }()
 
 	var events []AuditEvent
 	for rows.Next() {
