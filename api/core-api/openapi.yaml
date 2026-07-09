@@ -292,7 +292,7 @@ components:
         type: integer
         minimum: 1
         maximum: 100
-        default: 25
+        default: 15
       description: Rows per page.
     limit:
       name: limit
@@ -452,6 +452,7 @@ components:
         - name
         - accountType
         - active
+        - depth
       properties:
         code:
           type: string
@@ -476,6 +477,10 @@ components:
           description: COFOG functional classification mapping.
         active:
           type: boolean
+        depth:
+          type: integer
+          minimum: 0
+          description: Distance from a root account in the hierarchy (0-based).
     ListAccountsResponse:
       type: object
       required:

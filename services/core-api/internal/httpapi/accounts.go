@@ -26,6 +26,7 @@ type accountResponse struct {
 	GfsmCode    string `json:"gfsmCode,omitempty"`
 	CofogCode   string `json:"cofogCode,omitempty"`
 	Active      bool   `json:"active"`
+	Depth       int    `json:"depth"`
 }
 
 type listAccountsResponse struct {
@@ -61,6 +62,7 @@ func (config routerConfig) listAccounts(response http.ResponseWriter, request *h
 			GfsmCode:    account.GfsmCode,
 			CofogCode:   account.CofogCode,
 			Active:      account.Active,
+			Depth:       account.Depth,
 		})
 	}
 

@@ -10,15 +10,15 @@ import (
 )
 
 func accountColumns() []string {
-	return []string{"code", "name", "account_type", "parent_code", "gfsm_code", "cofog_code", "active", "total_count"}
+	return []string{"code", "name", "account_type", "parent_code", "gfsm_code", "cofog_code", "active", "depth", "total_count"}
 }
 
 func TestListAccountsReadsTheActiveChartVersion(t *testing.T) {
 	db, mock := newMockDB(t)
 
 	rows := sqlmock.NewRows(accountColumns()).
-		AddRow("1", "Revenue", "REVENUE", "", "1", "", true, 2).
-		AddRow("11", "Taxes", "REVENUE", "1", "11", "", true, 2)
+		AddRow("1", "Revenue", "REVENUE", "", "1", "", true, 0, 2).
+		AddRow("11", "Taxes", "REVENUE", "1", "11", "", true, 1, 2)
 
 	mock.ExpectQuery(regexp.QuoteMeta("WHERE c.status = 'ACTIVE'")).
 		WithArgs(25, 0).
@@ -40,7 +40,7 @@ func TestListAccountsFiltersByAccountType(t *testing.T) {
 	db, mock := newMockDB(t)
 
 	rows := sqlmock.NewRows(accountColumns()).
-		AddRow("63", "Liabilities", "LIABILITY", "", "63", "", true, 1)
+		AddRow("63", "Liabilities", "LIABILITY", "", "63", "", true, 0, 1)
 
 	mock.ExpectQuery(regexp.QuoteMeta("AND a.account_type = $1")).
 		WithArgs("LIABILITY", 25, 0).
