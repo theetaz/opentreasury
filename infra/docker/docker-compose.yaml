@@ -19,5 +19,66 @@ services:
       timeout: 3s
       retries: 15
 
+  migrate:
+    image: migrate/migrate:v4.19.1
+    container_name: opentreasury-migrate
+    volumes:
+      - ../../database/migrations:/migrations:ro
+    command:
+      - "-path=/migrations"
+      - "-database=postgres://opentreasury:opentreasury@postgres:5432/opentreasury_dev?sslmode=disable"
+      - "up"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  seed:
+    image: postgres:16
+    container_name: opentreasury-seed
+    volumes:
+      - ../../database/seeds:/seeds:ro
+    environment:
+      PGPASSWORD: opentreasury
+    entrypoint:
+      - sh
+      - -c
+      - |
+        set -e
+        for f in /seeds/*.sql; do
+          echo "==> applying $$f"
+          psql -h postgres -U opentreasury -d opentreasury_dev -q -f "$$f"
+        done
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    restart: "no"
+
+  core-api:
+    build:
+      context: ../../services/core-api
+    container_name: opentreasury-core-api
+    environment:
+      OPENTREASURY_DATABASE_DSN: postgres://opentreasury:opentreasury@postgres:5432/opentreasury_dev?sslmode=disable
+      OPENTREASURY_ALLOWED_ORIGINS: http://localhost:5173
+    ports:
+      - "8080:8080"
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
+  web:
+    build:
+      context: ../..
+      dockerfile: apps/web/Dockerfile
+      args:
+        # URL of the core API as reached from the user's browser.
+        VITE_CORE_API_URL: http://localhost:8080
+    container_name: opentreasury-web
+    ports:
+      - "5173:80"
+    depends_on:
+      - core-api
+
 volumes:
   postgres-data:
