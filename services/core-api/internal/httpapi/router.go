@@ -114,7 +114,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
 
-	var handler http.Handler = config.withCORS(mux)
+	handler := config.withCORS(mux)
 	handler = withMaxBodyBytes(config.maxBodyBytes, handler)
 	handler = withRecovery(config.logger, handler)
 	handler = withRequestLogging(config.logger, handler)
