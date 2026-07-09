@@ -256,7 +256,14 @@ func (config routerConfig) createTransaction(response http.ResponseWriter, reque
 	}
 
 	if err := config.transactionRepository.Save(request.Context(), tx); err != nil {
-		config.internalError(response, request, err)
+		switch {
+		case errors.Is(err, treasury.ErrDuplicateTransaction):
+			writeError(response, http.StatusConflict, treasury.ErrDuplicateTransaction.Error())
+		case errors.Is(err, treasury.ErrUnknownInstitution):
+			writeError(response, http.StatusUnprocessableEntity, treasury.ErrUnknownInstitution.Error())
+		default:
+			config.internalError(response, request, err)
+		}
 		return
 	}
 
@@ -394,17 +401,27 @@ func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactio
 	}
 
 	if limit := query.Get("limit"); limit != "" {
-		value, err := strconv.Atoi(limit)
-		if err != nil || value <= 0 {
-			return treasury.ListTransactionsFilter{}, treasury.ErrInvalidAmount
-		}
-		if value > 100 {
-			value = 100
+		value, err := parseLimit(limit)
+		if err != nil {
+			return treasury.ListTransactionsFilter{}, err
 		}
 		filter.Limit = value
 	}
 
 	return filter, nil
+}
+
+const maxListLimit = 100
+
+// parseLimit enforces the documented 1..100 range strictly; out-of-range
+// values are rejected rather than silently clamped (ADR-0002).
+func parseLimit(raw string) (int, error) {
+	value, err := strconv.Atoi(raw)
+	if err != nil || value <= 0 || value > maxListLimit {
+		return 0, treasury.ErrInvalidLimit
+	}
+
+	return value, nil
 }
 
 func parseListAuditEventsFilter(request *http.Request) (treasury.ListAuditEventsFilter, error) {
@@ -415,12 +432,9 @@ func parseListAuditEventsFilter(request *http.Request) (treasury.ListAuditEvents
 	}
 
 	if limit := query.Get("limit"); limit != "" {
-		value, err := strconv.Atoi(limit)
-		if err != nil || value <= 0 {
-			return treasury.ListAuditEventsFilter{}, treasury.ErrInvalidAmount
-		}
-		if value > 100 {
-			value = 100
+		value, err := parseLimit(limit)
+		if err != nil {
+			return treasury.ListAuditEventsFilter{}, err
 		}
 		filter.Limit = value
 	}
@@ -435,12 +449,9 @@ func parseListInstitutionsFilter(request *http.Request) (treasury.ListInstitutio
 	}
 
 	if limit := query.Get("limit"); limit != "" {
-		value, err := strconv.Atoi(limit)
-		if err != nil || value <= 0 {
-			return treasury.ListInstitutionsFilter{}, treasury.ErrInvalidAmount
-		}
-		if value > 100 {
-			value = 100
+		value, err := parseLimit(limit)
+		if err != nil {
+			return treasury.ListInstitutionsFilter{}, err
 		}
 		filter.Limit = value
 	}

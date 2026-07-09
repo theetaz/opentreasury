@@ -14,6 +14,9 @@ var (
 	ErrInvalidAmount          = errors.New("invalid amount")
 	ErrInvalidCurrency        = errors.New("invalid currency")
 	ErrInvalidTransactionDate = errors.New("invalid transaction date")
+	ErrInvalidLimit           = errors.New("invalid limit")
+	ErrDuplicateTransaction   = errors.New("transaction already exists")
+	ErrUnknownInstitution     = errors.New("institution does not exist")
 )
 
 type Transaction struct {
