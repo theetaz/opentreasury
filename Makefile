@@ -1,4 +1,4 @@
-.PHONY: verify verify-go verify-integration verify-js db-up db-down db-migrate db-migrate-down db-seed db-reset
+.PHONY: verify verify-go verify-integration verify-js verify-compose up down db-up db-down db-migrate db-migrate-down db-seed db-reset
 
 PNPM ?= corepack pnpm
 COMPOSE ?= docker compose -f infra/docker/docker-compose.yaml
@@ -6,6 +6,17 @@ MIGRATE_IMAGE ?= migrate/migrate:v4.19.1
 DB_DSN ?= postgres://opentreasury:opentreasury@localhost:5433/opentreasury_dev?sslmode=disable
 # host.docker.internal works on Docker Desktop (macOS/Windows); on Linux use --network host and localhost.
 DB_DSN_FROM_CONTAINER ?= postgres://opentreasury:opentreasury@host.docker.internal:5433/opentreasury_dev?sslmode=disable
+
+verify-compose:
+	$(COMPOSE) config -q
+
+# Full local stack: Postgres + migrations + seeds + core API + web app.
+# Dashboard: http://localhost:5173  ·  API: http://localhost:8080
+up:
+	$(COMPOSE) up -d --build --wait postgres core-api web
+
+down:
+	$(COMPOSE) down
 
 db-up:
 	$(COMPOSE) up -d --wait postgres
