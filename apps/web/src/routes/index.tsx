@@ -3,6 +3,7 @@ import { AppShell } from "@/components/app-shell";
 import AccountsPage from "./accounts";
 import BalancesPage from "./balances";
 import JournalPage from "./journal";
+import NotFoundPage from "./not-found";
 import AuditPage from "./audit";
 import InstitutionsPage from "./institutions";
 import OverviewPage from "./overview";
@@ -21,7 +22,8 @@ export const routes: RouteObject[] = [
       { path: "journal", element: <JournalPage /> },
       { path: "balances", element: <BalancesPage /> },
       { path: "institutions", element: <InstitutionsPage /> },
-      { path: "audit", element: <AuditPage /> }
+      { path: "audit", element: <AuditPage /> },
+      { path: "*", element: <NotFoundPage /> }
     ]
   }
 ];

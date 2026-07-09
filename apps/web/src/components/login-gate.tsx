@@ -3,6 +3,8 @@ import { ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { authEnabled, useAuthStore } from "@/stores/auth";
 
+let callbackStarted = false;
+
 // Gates the app behind OIDC login when authentication is enabled. In demo mode
 // (no OIDC authority configured) it renders children immediately.
 export function LoginGate({ children }: { children: React.ReactNode }) {
@@ -14,7 +16,11 @@ export function LoginGate({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     if (window.location.pathname === "/auth/callback") {
-      void handleCallback();
+      // Guard StrictMode double-invocation: the OIDC state is single-use.
+      if (!callbackStarted) {
+        callbackStarted = true;
+        void handleCallback();
+      }
     } else {
       void loadUser();
     }
