@@ -27,8 +27,8 @@ func (repository conformanceRepository) Save(context.Context, treasury.Transacti
 	return repository.saveErr
 }
 
-func (conformanceRepository) List(context.Context, treasury.ListTransactionsFilter) ([]treasury.Transaction, error) {
-	return []treasury.Transaction{{
+func (conformanceRepository) List(context.Context, treasury.ListTransactionsFilter) (treasury.TransactionPage, error) {
+	return treasury.TransactionPage{Total: 1, Transactions: []treasury.Transaction{{
 		ID:              "txn-2026-0001",
 		InstitutionID:   "minfin",
 		FiscalYear:      2026,
@@ -36,28 +36,28 @@ func (conformanceRepository) List(context.Context, treasury.ListTransactionsFilt
 		Currency:        "USD",
 		Description:     "Road maintenance payment",
 		TransactionDate: "2026-06-28",
-	}}, nil
+	}}}, nil
 }
 
-func (conformanceRepository) ListAuditEvents(context.Context, treasury.ListAuditEventsFilter) ([]treasury.AuditEvent, error) {
-	return []treasury.AuditEvent{{
+func (conformanceRepository) ListAuditEvents(context.Context, treasury.ListAuditEventsFilter) (treasury.AuditEventPage, error) {
+	return treasury.AuditEventPage{Total: 1, Events: []treasury.AuditEvent{{
 		ID:            "audit-txn-2026-0001-created",
 		EventType:     "TRANSACTION_CREATED",
 		TransactionID: "txn-2026-0001",
 		InstitutionID: "minfin",
 		OccurredAt:    "2026-06-28T10:24:28Z",
 		Summary:       "Transaction txn-2026-0001 was created.",
-	}}, nil
+	}}}, nil
 }
 
-func (conformanceRepository) ListInstitutions(context.Context, treasury.ListInstitutionsFilter) ([]treasury.Institution, error) {
-	return []treasury.Institution{{
+func (conformanceRepository) ListInstitutions(context.Context, treasury.ListInstitutionsFilter) (treasury.InstitutionPage, error) {
+	return treasury.InstitutionPage{Total: 1, Institutions: []treasury.Institution{{
 		ID:          "minfin",
 		Name:        "Ministry of Finance",
 		Type:        "MINISTRY",
 		CountryCode: "KE",
 		Status:      "ACTIVE",
-	}}, nil
+	}}}, nil
 }
 
 const validTransactionJSON = `{

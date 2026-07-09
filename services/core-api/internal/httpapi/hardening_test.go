@@ -22,7 +22,7 @@ func (panickingTransactionRepository) Save(context.Context, treasury.Transaction
 	panic("boom: sensitive internal state")
 }
 
-func (panickingTransactionRepository) List(context.Context, treasury.ListTransactionsFilter) ([]treasury.Transaction, error) {
+func (panickingTransactionRepository) List(context.Context, treasury.ListTransactionsFilter) (treasury.TransactionPage, error) {
 	panic("boom: sensitive internal state")
 }
 
@@ -32,8 +32,8 @@ func (failingTransactionRepository) Save(context.Context, treasury.Transaction) 
 	return errors.New("pq: duplicate key value violates unique constraint on table treasury_transactions")
 }
 
-func (failingTransactionRepository) List(context.Context, treasury.ListTransactionsFilter) ([]treasury.Transaction, error) {
-	return nil, errors.New("pq: connection to server at 10.0.0.7 failed")
+func (failingTransactionRepository) List(context.Context, treasury.ListTransactionsFilter) (treasury.TransactionPage, error) {
+	return treasury.TransactionPage{}, errors.New("pq: connection to server at 10.0.0.7 failed")
 }
 
 func validTransactionBody(t *testing.T) *bytes.Reader {

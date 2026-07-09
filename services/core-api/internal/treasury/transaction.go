@@ -15,9 +15,28 @@ var (
 	ErrInvalidCurrency        = errors.New("invalid currency")
 	ErrInvalidTransactionDate = errors.New("invalid transaction date")
 	ErrInvalidLimit           = errors.New("invalid limit")
+	ErrInvalidPage            = errors.New("invalid page")
+	ErrInvalidPageSize        = errors.New("invalid page size")
+	ErrInvalidDateRange       = errors.New("invalid date range")
+	ErrInvalidAmountFilter    = errors.New("invalid amount filter")
+	ErrInvalidStatus          = errors.New("invalid status")
 	ErrDuplicateTransaction   = errors.New("transaction already exists")
 	ErrUnknownInstitution     = errors.New("institution does not exist")
 )
+
+// Pagination is the common page window for all list queries.
+// Page is 1-based; PageSize is capped by the HTTP layer.
+type Pagination struct {
+	Page     int
+	PageSize int
+}
+
+func (p Pagination) Offset() int {
+	if p.Page <= 1 {
+		return 0
+	}
+	return (p.Page - 1) * p.PageSize
+}
 
 type Transaction struct {
 	ID              string
@@ -30,9 +49,18 @@ type Transaction struct {
 }
 
 type ListTransactionsFilter struct {
-	InstitutionID string
-	FiscalYear    int
-	Limit         int
+	InstitutionID  string
+	FiscalYear     int
+	DateFrom       string // inclusive ISO date bound on transaction_date
+	DateTo         string
+	AmountMinorGte int64 // 0 means unset (amounts are strictly positive)
+	AmountMinorLte int64
+	Pagination
+}
+
+type TransactionPage struct {
+	Transactions []Transaction
+	Total        int
 }
 
 type AuditEvent struct {
@@ -46,7 +74,14 @@ type AuditEvent struct {
 
 type ListAuditEventsFilter struct {
 	InstitutionID string
-	Limit         int
+	DateFrom      string // inclusive ISO date bound on the event timestamp
+	DateTo        string
+	Pagination
+}
+
+type AuditEventPage struct {
+	Events []AuditEvent
+	Total  int
 }
 
 type Institution struct {
@@ -58,7 +93,13 @@ type Institution struct {
 }
 
 type ListInstitutionsFilter struct {
-	Limit int
+	Status string
+	Pagination
+}
+
+type InstitutionPage struct {
+	Institutions []Institution
+	Total        int
 }
 
 func ValidateTransaction(tx Transaction) error {

@@ -33,7 +33,7 @@ func TestListTransactionsEndpointReturnsTransactions(t *testing.T) {
 	require.Equal(t, treasury.ListTransactionsFilter{
 		InstitutionID: "minfin",
 		FiscalYear:    2026,
-		Limit:         25,
+		Pagination:    treasury.Pagination{Page: 1, PageSize: 25},
 	}, repository.filter)
 
 	var body struct {
@@ -54,7 +54,7 @@ func TestListTransactionsEndpointReturnsTransactions(t *testing.T) {
 	require.Equal(t, "minfin", body.Transactions[0].InstitutionID)
 }
 
-func TestListTransactionsEndpointUsesDefaultLimit(t *testing.T) {
+func TestListTransactionsEndpointUsesDefaultPageSize(t *testing.T) {
 	repository := &recordingTransactionRepository{}
 	request := httptest.NewRequest(http.MethodGet, "/v1/transactions", nil)
 	response := httptest.NewRecorder()
@@ -63,7 +63,7 @@ func TestListTransactionsEndpointUsesDefaultLimit(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, response.Code)
 	require.Equal(t, treasury.ListTransactionsFilter{
-		Limit: 50,
+		Pagination: treasury.Pagination{Page: 1, PageSize: 25},
 	}, repository.filter)
 }
 

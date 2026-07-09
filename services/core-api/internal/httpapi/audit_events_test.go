@@ -32,7 +32,7 @@ func TestListAuditEventsEndpointReturnsEvents(t *testing.T) {
 	require.Equal(t, http.StatusOK, response.Code)
 	require.Equal(t, treasury.ListAuditEventsFilter{
 		InstitutionID: "minfin",
-		Limit:         25,
+		Pagination:    treasury.Pagination{Page: 1, PageSize: 25},
 	}, repository.filter)
 
 	var body struct {
@@ -60,7 +60,7 @@ type recordingAuditEventRepository struct {
 	filter treasury.ListAuditEventsFilter
 }
 
-func (repository *recordingAuditEventRepository) ListAuditEvents(ctx context.Context, filter treasury.ListAuditEventsFilter) ([]treasury.AuditEvent, error) {
+func (repository *recordingAuditEventRepository) ListAuditEvents(ctx context.Context, filter treasury.ListAuditEventsFilter) (treasury.AuditEventPage, error) {
 	repository.filter = filter
-	return repository.events, nil
+	return treasury.AuditEventPage{Events: repository.events, Total: len(repository.events)}, nil
 }
