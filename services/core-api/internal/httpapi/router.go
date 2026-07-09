@@ -256,7 +256,12 @@ func (config routerConfig) createTransaction(response http.ResponseWriter, reque
 		return
 	}
 
-	if err := config.transactionRepository.Save(request.Context(), tx); err != nil {
+	auditCtx := treasury.ContextWithAuditMetadata(request.Context(), treasury.AuditMetadata{
+		Actor:     "system", // becomes the authenticated principal once identity lands (Phase 2)
+		RequestID: requestIDFromContext(request.Context()),
+	})
+
+	if err := config.transactionRepository.Save(auditCtx, tx); err != nil {
 		switch {
 		case errors.Is(err, treasury.ErrDuplicateTransaction):
 			writeError(response, http.StatusConflict, treasury.ErrDuplicateTransaction.Error())

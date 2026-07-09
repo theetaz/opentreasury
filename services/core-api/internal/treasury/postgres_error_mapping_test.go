@@ -23,6 +23,7 @@ func validSaveTransaction() Transaction {
 }
 
 func expectInsert(mock sqlmock.Sqlmock) *sqlmock.ExpectedExec {
+	mock.ExpectBegin()
 	return mock.ExpectExec(regexp.QuoteMeta(`
 		INSERT INTO treasury_transactions (
 			id,
