@@ -22,6 +22,12 @@ Object.defineProperty(window, "matchMedia", {
   })
 });
 
+// jsdom lacks the pointer-capture and scroll APIs Radix Select relies on.
+Element.prototype.hasPointerCapture = Element.prototype.hasPointerCapture ?? (() => false);
+Element.prototype.setPointerCapture = Element.prototype.setPointerCapture ?? (() => {});
+Element.prototype.releasePointerCapture = Element.prototype.releasePointerCapture ?? (() => {});
+Element.prototype.scrollIntoView = Element.prototype.scrollIntoView ?? (() => {});
+
 // jsdom lacks ResizeObserver; recharts responsive containers need it.
 class ResizeObserverStub {
   observe() {}

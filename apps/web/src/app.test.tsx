@@ -46,6 +46,41 @@ describe("app shell", () => {
   });
 });
 
+describe("transactions data table", () => {
+  it("reads table state from the URL and renders the matching server page", async () => {
+    renderApp("/transactions?institutionId=minfin&pageSize=10");
+
+    // Simulated mode mirrors the server: minfin has exactly one transaction.
+    expect(await screen.findByText("txn-2026-0001")).toBeInTheDocument();
+    expect(screen.queryByText("txn-2026-0000")).not.toBeInTheDocument();
+    expect(await screen.findByText(/1–1 of 1/)).toBeInTheDocument();
+  });
+
+  it("filters through the institution dropdown and updates the table", async () => {
+    const user = userEvent.setup();
+    renderApp("/transactions");
+
+    expect(await screen.findByText("txn-2026-0000")).toBeInTheDocument();
+
+    await user.click(screen.getByRole("combobox", { name: "Institution" }));
+    await user.click(await screen.findByRole("option", { name: "Ministry of Health" }));
+
+    expect(await screen.findByText("txn-2025-0942")).toBeInTheDocument();
+    expect(screen.queryByText("txn-2026-0001")).not.toBeInTheDocument();
+  });
+
+  it("paginates server-side through the footer controls", async () => {
+    const user = userEvent.setup();
+    renderApp("/transactions?pageSize=10");
+
+    expect(await screen.findByText(/1–3 of 3/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
+
+    await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
+    await user.click(await screen.findByRole("option", { name: "10 / page" }));
+  });
+});
+
 describe("validation workbench", () => {
   it("validates a transaction payload end-to-end (simulated mode)", async () => {
     const user = userEvent.setup();

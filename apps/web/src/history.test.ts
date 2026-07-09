@@ -16,6 +16,22 @@ describe("buildTransactionsPath", () => {
       })
     ).toBe("/v1/transactions?institutionId=minfin&fiscalYear=2026&limit=5");
   });
+
+  it("carries table filters and pagination as query parameters", () => {
+    expect(
+      buildTransactionsPath({
+        institutionId: "minfin",
+        dateFrom: "2026-01-01",
+        dateTo: "2026-12-31",
+        amountGte: 100000,
+        amountLte: 200000,
+        page: 2,
+        pageSize: 10
+      })
+    ).toBe(
+      "/v1/transactions?institutionId=minfin&dateFrom=2026-01-01&dateTo=2026-12-31&amountGte=100000&amountLte=200000&page=2&pageSize=10"
+    );
+  });
 });
 
 describe("toTransactionListFilter", () => {

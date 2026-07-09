@@ -1,5 +1,27 @@
 import { describe, expect, it } from "vitest";
-import { listAuditEvents, listInstitutions, validateTransaction } from "./api";
+import { listAuditEvents, listInstitutions, listTransactions, validateTransaction } from "./api";
+
+describe("listTransactions (simulated mode)", () => {
+  it("applies filters and reports pagination totals like the server", async () => {
+    const result = await listTransactions({ institutionId: "minfin", page: 1, pageSize: 1 });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.transactions).toHaveLength(1);
+      expect(result.transactions[0]?.institutionId).toBe("minfin");
+      expect(result.pagination).toEqual({ page: 1, pageSize: 1, total: 1 });
+    }
+  });
+
+  it("filters by amount bounds", async () => {
+    const result = await listTransactions({ amountGte: 100000 });
+
+    expect(result.ok).toBe(true);
+    if (result.ok) {
+      expect(result.transactions.map((tx) => tx.id).sort()).toEqual(["txn-2025-0942", "txn-2026-0001"]);
+    }
+  });
+});
 
 describe("validateTransaction", () => {
   it("returns the core API validation result shape in local simulation", async () => {
@@ -44,7 +66,8 @@ describe("listAuditEvents", () => {
           occurredAt: "2026-06-28T10:24:28Z",
           summary: "Transaction txn-2026-0001 was created."
         }
-      ]
+      ],
+      pagination: { page: 1, pageSize: 1, total: 1 }
     });
   });
 });
@@ -61,7 +84,8 @@ describe("listInstitutions", () => {
           countryCode: "KE",
           status: "ACTIVE"
         }
-      ]
+      ],
+      pagination: { page: 1, pageSize: 1, total: 3 }
     });
   });
 });

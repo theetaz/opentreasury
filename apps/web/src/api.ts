@@ -12,18 +12,37 @@ export type TreasuryTransaction = {
   transactionDate: string;
 };
 
+export type PageInfo = {
+  page: number;
+  pageSize: number;
+  total: number;
+};
+
 export type TransactionListFilter = {
   institutionId?: string;
   fiscalYear?: number;
+  dateFrom?: string;
+  dateTo?: string;
+  amountGte?: number;
+  amountLte?: number;
+  page?: number;
+  pageSize?: number;
   limit?: number;
 };
 
 export type AuditEventListFilter = {
   institutionId?: string;
+  dateFrom?: string;
+  dateTo?: string;
+  page?: number;
+  pageSize?: number;
   limit?: number;
 };
 
 export type InstitutionListFilter = {
+  status?: string;
+  page?: number;
+  pageSize?: number;
   limit?: number;
 };
 
@@ -44,7 +63,7 @@ export type ValidationResponse = {
 };
 
 export type TransactionListResult =
-  | { ok: true; transactions: TreasuryTransaction[] }
+  | { ok: true; transactions: TreasuryTransaction[]; pagination: PageInfo }
   | { ok: false; error: string };
 
 export type AuditEvent = {
@@ -57,7 +76,7 @@ export type AuditEvent = {
 };
 
 export type AuditEventListResult =
-  | { ok: true; events: AuditEvent[] }
+  | { ok: true; events: AuditEvent[]; pagination: PageInfo }
   | { ok: false; error: string };
 
 export type Institution = {
@@ -69,7 +88,7 @@ export type Institution = {
 };
 
 export type InstitutionListResult =
-  | { ok: true; institutions: Institution[] }
+  | { ok: true; institutions: Institution[]; pagination: PageInfo }
   | { ok: false; error: string };
 
 export type HealthCheckResult =
@@ -191,7 +210,7 @@ export async function checkCoreApiHealth(): Promise<HealthCheckResult> {
 
 export async function listTransactions(filter: TransactionListFilter = { limit: 5 }): Promise<TransactionListResult> {
   if (!apiBaseUrl) {
-    return { ok: true, transactions: filterSimulatedTransactions(filter) };
+    return simulateTransactionList(filter);
   }
 
   try {
@@ -205,8 +224,12 @@ export async function listTransactions(filter: TransactionListFilter = { limit: 
       };
     }
 
-    const body = (await response.json()) as { transactions?: TreasuryTransaction[] };
-    return { ok: true, transactions: body.transactions ?? [] };
+    const body = (await response.json()) as { transactions?: TreasuryTransaction[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      transactions: body.transactions ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.transactions?.length ?? 0)
+    };
   } catch {
     return { ok: false, error: "Core API is not reachable" };
   }
@@ -214,7 +237,7 @@ export async function listTransactions(filter: TransactionListFilter = { limit: 
 
 export async function listAuditEvents(filter: AuditEventListFilter = { limit: 5 }): Promise<AuditEventListResult> {
   if (!apiBaseUrl) {
-    return { ok: true, events: filterSimulatedAuditEvents(filter) };
+    return simulateAuditEventList(filter);
   }
 
   try {
@@ -228,8 +251,12 @@ export async function listAuditEvents(filter: AuditEventListFilter = { limit: 5 
       };
     }
 
-    const body = (await response.json()) as { events?: AuditEvent[] };
-    return { ok: true, events: body.events ?? [] };
+    const body = (await response.json()) as { events?: AuditEvent[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      events: body.events ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.events?.length ?? 0)
+    };
   } catch {
     return { ok: false, error: "Core API is not reachable" };
   }
@@ -237,7 +264,7 @@ export async function listAuditEvents(filter: AuditEventListFilter = { limit: 5 
 
 export async function listInstitutions(filter: InstitutionListFilter = { limit: 5 }): Promise<InstitutionListResult> {
   if (!apiBaseUrl) {
-    return { ok: true, institutions: simulatedInstitutions.slice(0, filter.limit ?? 5) };
+    return simulateInstitutionList(filter);
   }
 
   try {
@@ -251,8 +278,12 @@ export async function listInstitutions(filter: InstitutionListFilter = { limit: 
       };
     }
 
-    const body = (await response.json()) as { institutions?: Institution[] };
-    return { ok: true, institutions: body.institutions ?? [] };
+    const body = (await response.json()) as { institutions?: Institution[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      institutions: body.institutions ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.institutions?.length ?? 0)
+    };
   } catch {
     return { ok: false, error: "Core API is not reachable" };
   }
@@ -308,17 +339,55 @@ async function postTransaction(path: string, transaction: TreasuryTransaction): 
   }
 }
 
-function filterSimulatedTransactions(filter: TransactionListFilter): TreasuryTransaction[] {
-  return simulatedTransactions
-    .filter((transaction) => !filter.institutionId || transaction.institutionId === filter.institutionId)
-    .filter((transaction) => !filter.fiscalYear || transaction.fiscalYear === filter.fiscalYear)
-    .slice(0, filter.limit ?? 5);
+type PageWindow = { page: number; pageSize: number };
+
+function pageWindow(filter: { page?: number; pageSize?: number; limit?: number }): PageWindow {
+  return {
+    page: filter.page && filter.page > 0 ? filter.page : 1,
+    pageSize: filter.pageSize ?? filter.limit ?? 25
+  };
 }
 
-function filterSimulatedAuditEvents(filter: AuditEventListFilter): AuditEvent[] {
-  return simulatedAuditEvents
+function paginate<T>(rows: T[], window: PageWindow): { rows: T[]; pagination: PageInfo } {
+  const start = (window.page - 1) * window.pageSize;
+  return {
+    rows: rows.slice(start, start + window.pageSize),
+    pagination: { page: window.page, pageSize: window.pageSize, total: rows.length }
+  };
+}
+
+function fallbackPageInfo(filter: { page?: number; pageSize?: number; limit?: number }, count: number): PageInfo {
+  const window = pageWindow(filter);
+  return { page: window.page, pageSize: window.pageSize, total: count };
+}
+
+function simulateTransactionList(filter: TransactionListFilter): TransactionListResult {
+  const matches = simulatedTransactions
+    .filter((transaction) => !filter.institutionId || transaction.institutionId === filter.institutionId)
+    .filter((transaction) => !filter.fiscalYear || transaction.fiscalYear === filter.fiscalYear)
+    .filter((transaction) => !filter.dateFrom || transaction.transactionDate >= filter.dateFrom)
+    .filter((transaction) => !filter.dateTo || transaction.transactionDate <= filter.dateTo)
+    .filter((transaction) => !filter.amountGte || transaction.amountMinor >= filter.amountGte)
+    .filter((transaction) => !filter.amountLte || transaction.amountMinor <= filter.amountLte);
+  const { rows, pagination } = paginate(matches, pageWindow(filter));
+  return { ok: true, transactions: rows, pagination };
+}
+
+function simulateAuditEventList(filter: AuditEventListFilter): AuditEventListResult {
+  const matches = simulatedAuditEvents
     .filter((event) => !filter.institutionId || event.institutionId === filter.institutionId)
-    .slice(0, filter.limit ?? 5);
+    .filter((event) => !filter.dateFrom || event.occurredAt.slice(0, 10) >= filter.dateFrom)
+    .filter((event) => !filter.dateTo || event.occurredAt.slice(0, 10) <= filter.dateTo);
+  const { rows, pagination } = paginate(matches, pageWindow(filter));
+  return { ok: true, events: rows, pagination };
+}
+
+function simulateInstitutionList(filter: InstitutionListFilter): InstitutionListResult {
+  const matches = simulatedInstitutions.filter(
+    (institution) => !filter.status || institution.status === filter.status
+  );
+  const { rows, pagination } = paginate(matches, pageWindow(filter));
+  return { ok: true, institutions: rows, pagination };
 }
 
 function simulateValidation(transaction: TreasuryTransaction): ApiResult {

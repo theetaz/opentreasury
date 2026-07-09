@@ -22,9 +22,9 @@ const timelineConfig = {
 
 export default function OverviewPage() {
   const health = useHealth();
-  const transactions = useTransactions({ limit: 50 });
+  const transactions = useTransactions({ pageSize: 50 });
   const institutions = useInstitutions();
-  const auditEvents = useAuditEvents({ limit: 50 });
+  const auditEvents = useAuditEvents({ pageSize: 50 });
 
   const txs = transactions.data?.ok ? transactions.data.transactions : [];
   const totalMinor = txs.reduce((sum, tx) => sum + tx.amountMinor, 0);
