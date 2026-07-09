@@ -6,6 +6,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"net/url"
 	"strconv"
 	"time"
 
@@ -18,15 +19,15 @@ const readinessCheckTimeout = 2 * time.Second
 
 type TransactionRepository interface {
 	Save(context.Context, treasury.Transaction) error
-	List(context.Context, treasury.ListTransactionsFilter) ([]treasury.Transaction, error)
+	List(context.Context, treasury.ListTransactionsFilter) (treasury.TransactionPage, error)
 }
 
 type AuditEventRepository interface {
-	ListAuditEvents(context.Context, treasury.ListAuditEventsFilter) ([]treasury.AuditEvent, error)
+	ListAuditEvents(context.Context, treasury.ListAuditEventsFilter) (treasury.AuditEventPage, error)
 }
 
 type InstitutionRepository interface {
-	ListInstitutions(context.Context, treasury.ListInstitutionsFilter) ([]treasury.Institution, error)
+	ListInstitutions(context.Context, treasury.ListInstitutionsFilter) (treasury.InstitutionPage, error)
 }
 
 type RouterOption func(*routerConfig)
@@ -286,7 +287,7 @@ func (config routerConfig) listTransactions(response http.ResponseWriter, reques
 		return
 	}
 
-	transactions, err := config.transactionRepository.List(request.Context(), filter)
+	page, err := config.transactionRepository.List(request.Context(), filter)
 	if err != nil {
 		config.internalError(response, request, err)
 		return
@@ -294,7 +295,8 @@ func (config routerConfig) listTransactions(response http.ResponseWriter, reques
 
 	response.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(response).Encode(listTransactionsResponse{
-		Transactions: toTransactionResponses(transactions),
+		Transactions: toTransactionResponses(page.Transactions),
+		Pagination:   toPaginationResponse(filter.Pagination, page.Total),
 	})
 }
 
@@ -310,7 +312,7 @@ func (config routerConfig) listAuditEvents(response http.ResponseWriter, request
 		return
 	}
 
-	events, err := config.auditEventRepository.ListAuditEvents(request.Context(), filter)
+	page, err := config.auditEventRepository.ListAuditEvents(request.Context(), filter)
 	if err != nil {
 		config.internalError(response, request, err)
 		return
@@ -318,7 +320,8 @@ func (config routerConfig) listAuditEvents(response http.ResponseWriter, request
 
 	response.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(response).Encode(listAuditEventsResponse{
-		Events: toAuditEventResponses(events),
+		Events:     toAuditEventResponses(page.Events),
+		Pagination: toPaginationResponse(filter.Pagination, page.Total),
 	})
 }
 
@@ -334,7 +337,7 @@ func (config routerConfig) listInstitutions(response http.ResponseWriter, reques
 		return
 	}
 
-	institutions, err := config.institutionRepository.ListInstitutions(request.Context(), filter)
+	page, err := config.institutionRepository.ListInstitutions(request.Context(), filter)
 	if err != nil {
 		config.internalError(response, request, err)
 		return
@@ -342,20 +345,34 @@ func (config routerConfig) listInstitutions(response http.ResponseWriter, reques
 
 	response.Header().Set("Content-Type", "application/json")
 	_ = json.NewEncoder(response).Encode(listInstitutionsResponse{
-		Institutions: toInstitutionResponses(institutions),
+		Institutions: toInstitutionResponses(page.Institutions),
+		Pagination:   toPaginationResponse(filter.Pagination, page.Total),
 	})
+}
+
+type paginationResponse struct {
+	Page     int `json:"page"`
+	PageSize int `json:"pageSize"`
+	Total    int `json:"total"`
+}
+
+func toPaginationResponse(pagination treasury.Pagination, total int) paginationResponse {
+	return paginationResponse{Page: pagination.Page, PageSize: pagination.PageSize, Total: total}
 }
 
 type listTransactionsResponse struct {
 	Transactions []transactionResponse `json:"transactions"`
+	Pagination   paginationResponse    `json:"pagination"`
 }
 
 type listAuditEventsResponse struct {
-	Events []auditEventResponse `json:"events"`
+	Events     []auditEventResponse `json:"events"`
+	Pagination paginationResponse   `json:"pagination"`
 }
 
 type listInstitutionsResponse struct {
 	Institutions []institutionResponse `json:"institutions"`
+	Pagination   paginationResponse    `json:"pagination"`
 }
 
 type transactionResponse struct {
@@ -385,33 +402,10 @@ type institutionResponse struct {
 	Status      string `json:"status"`
 }
 
-func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactionsFilter, error) {
-	query := request.URL.Query()
-	filter := treasury.ListTransactionsFilter{
-		InstitutionID: query.Get("institutionId"),
-		Limit:         50,
-	}
-
-	if fiscalYear := query.Get("fiscalYear"); fiscalYear != "" {
-		value, err := strconv.Atoi(fiscalYear)
-		if err != nil || value <= 0 {
-			return treasury.ListTransactionsFilter{}, treasury.ErrInvalidFiscalYear
-		}
-		filter.FiscalYear = value
-	}
-
-	if limit := query.Get("limit"); limit != "" {
-		value, err := parseLimit(limit)
-		if err != nil {
-			return treasury.ListTransactionsFilter{}, err
-		}
-		filter.Limit = value
-	}
-
-	return filter, nil
-}
-
-const maxListLimit = 100
+const (
+	maxListLimit    = 100
+	defaultPageSize = 25
+)
 
 // parseLimit enforces the documented 1..100 range strictly; out-of-range
 // values are rejected rather than silently clamped (ADR-0002).
@@ -424,36 +418,144 @@ func parseLimit(raw string) (int, error) {
 	return value, nil
 }
 
-func parseListAuditEventsFilter(request *http.Request) (treasury.ListAuditEventsFilter, error) {
-	query := request.URL.Query()
-	filter := treasury.ListAuditEventsFilter{
-		InstitutionID: query.Get("institutionId"),
-		Limit:         50,
+// parsePagination reads page/pageSize (with `limit` as a deprecated alias
+// for pageSize). Table state travels in query parameters by convention.
+func parsePagination(query url.Values) (treasury.Pagination, error) {
+	pagination := treasury.Pagination{Page: 1, PageSize: defaultPageSize}
+
+	if raw := query.Get("page"); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value <= 0 {
+			return treasury.Pagination{}, treasury.ErrInvalidPage
+		}
+		pagination.Page = value
 	}
 
-	if limit := query.Get("limit"); limit != "" {
-		value, err := parseLimit(limit)
-		if err != nil {
-			return treasury.ListAuditEventsFilter{}, err
+	if raw := query.Get("pageSize"); raw != "" {
+		value, err := strconv.Atoi(raw)
+		if err != nil || value <= 0 || value > maxListLimit {
+			return treasury.Pagination{}, treasury.ErrInvalidPageSize
 		}
-		filter.Limit = value
+		pagination.PageSize = value
+	} else if raw := query.Get("limit"); raw != "" {
+		value, err := parseLimit(raw)
+		if err != nil {
+			return treasury.Pagination{}, err
+		}
+		pagination.PageSize = value
+	}
+
+	return pagination, nil
+}
+
+// parseDateRange reads inclusive ISO-date bounds named fromKey/toKey and
+// rejects malformed or inverted ranges.
+func parseDateRange(query url.Values) (from, to string, err error) {
+	from = query.Get("dateFrom")
+	to = query.Get("dateTo")
+
+	for _, value := range []string{from, to} {
+		if value == "" {
+			continue
+		}
+		if _, parseErr := time.Parse(time.DateOnly, value); parseErr != nil {
+			return "", "", treasury.ErrInvalidDateRange
+		}
+	}
+
+	if from != "" && to != "" && from > to {
+		return "", "", treasury.ErrInvalidDateRange
+	}
+
+	return from, to, nil
+}
+
+// parseAmountBound reads a non-negative minor-unit integer filter value.
+func parseAmountBound(query url.Values, key string) (int64, error) {
+	raw := query.Get(key)
+	if raw == "" {
+		return 0, nil
+	}
+
+	value, err := strconv.ParseInt(raw, 10, 64)
+	if err != nil || value < 0 {
+		return 0, treasury.ErrInvalidAmountFilter
+	}
+
+	return value, nil
+}
+
+func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactionsFilter, error) {
+	query := request.URL.Query()
+	filter := treasury.ListTransactionsFilter{
+		InstitutionID: query.Get("institutionId"),
+	}
+
+	if fiscalYear := query.Get("fiscalYear"); fiscalYear != "" {
+		value, err := strconv.Atoi(fiscalYear)
+		if err != nil || value <= 0 {
+			return treasury.ListTransactionsFilter{}, treasury.ErrInvalidFiscalYear
+		}
+		filter.FiscalYear = value
+	}
+
+	var err error
+	if filter.DateFrom, filter.DateTo, err = parseDateRange(query); err != nil {
+		return treasury.ListTransactionsFilter{}, err
+	}
+
+	if filter.AmountMinorGte, err = parseAmountBound(query, "amountGte"); err != nil {
+		return treasury.ListTransactionsFilter{}, err
+	}
+
+	if filter.AmountMinorLte, err = parseAmountBound(query, "amountLte"); err != nil {
+		return treasury.ListTransactionsFilter{}, err
+	}
+
+	if filter.Pagination, err = parsePagination(query); err != nil {
+		return treasury.ListTransactionsFilter{}, err
 	}
 
 	return filter, nil
 }
 
-func parseListInstitutionsFilter(request *http.Request) (treasury.ListInstitutionsFilter, error) {
+func parseListAuditEventsFilter(request *http.Request) (treasury.ListAuditEventsFilter, error) {
 	query := request.URL.Query()
-	filter := treasury.ListInstitutionsFilter{
-		Limit: 50,
+	filter := treasury.ListAuditEventsFilter{
+		InstitutionID: query.Get("institutionId"),
 	}
 
-	if limit := query.Get("limit"); limit != "" {
-		value, err := parseLimit(limit)
-		if err != nil {
-			return treasury.ListInstitutionsFilter{}, err
+	var err error
+	if filter.DateFrom, filter.DateTo, err = parseDateRange(query); err != nil {
+		return treasury.ListAuditEventsFilter{}, err
+	}
+
+	if filter.Pagination, err = parsePagination(query); err != nil {
+		return treasury.ListAuditEventsFilter{}, err
+	}
+
+	return filter, nil
+}
+
+var validInstitutionStatuses = map[string]struct{}{
+	"ACTIVE":   {},
+	"INACTIVE": {},
+}
+
+func parseListInstitutionsFilter(request *http.Request) (treasury.ListInstitutionsFilter, error) {
+	query := request.URL.Query()
+	filter := treasury.ListInstitutionsFilter{}
+
+	if status := query.Get("status"); status != "" {
+		if _, ok := validInstitutionStatuses[status]; !ok {
+			return treasury.ListInstitutionsFilter{}, treasury.ErrInvalidStatus
 		}
-		filter.Limit = value
+		filter.Status = status
+	}
+
+	var err error
+	if filter.Pagination, err = parsePagination(query); err != nil {
+		return treasury.ListInstitutionsFilter{}, err
 	}
 
 	return filter, nil

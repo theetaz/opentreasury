@@ -70,7 +70,7 @@ func mapSaveError(transactionID string, err error) error {
 	return err
 }
 
-func (repository *PostgresTransactionRepository) List(ctx context.Context, filter ListTransactionsFilter) ([]Transaction, error) {
+func (repository *PostgresTransactionRepository) List(ctx context.Context, filter ListTransactionsFilter) (TransactionPage, error) {
 	query := `
 		SELECT
 			id,
@@ -79,11 +79,12 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 			amount_minor,
 			currency,
 			description,
-			transaction_date::text
+			transaction_date::text,
+			COUNT(*) OVER() AS total_count
 		FROM treasury_transactions
 	`
-	args := make([]any, 0, 3)
-	conditions := make([]string, 0, 2)
+	args := make([]any, 0, 8)
+	conditions := make([]string, 0, 6)
 
 	if filter.InstitutionID != "" {
 		args = append(args, filter.InstitutionID)
@@ -95,22 +96,42 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 		conditions = append(conditions, fmt.Sprintf("fiscal_year = $%d", len(args)))
 	}
 
+	if filter.DateFrom != "" {
+		args = append(args, filter.DateFrom)
+		conditions = append(conditions, fmt.Sprintf("transaction_date >= $%d", len(args)))
+	}
+
+	if filter.DateTo != "" {
+		args = append(args, filter.DateTo)
+		conditions = append(conditions, fmt.Sprintf("transaction_date <= $%d", len(args)))
+	}
+
+	if filter.AmountMinorGte > 0 {
+		args = append(args, filter.AmountMinorGte)
+		conditions = append(conditions, fmt.Sprintf("amount_minor >= $%d", len(args)))
+	}
+
+	if filter.AmountMinorLte > 0 {
+		args = append(args, filter.AmountMinorLte)
+		conditions = append(conditions, fmt.Sprintf("amount_minor <= $%d", len(args)))
+	}
+
 	if len(conditions) > 0 {
 		query += "WHERE " + strings.Join(conditions, " AND ") + "\n"
 	}
 
-	args = append(args, filter.Limit)
+	args = append(args, filter.PageSize, filter.Offset())
 	query += fmt.Sprintf(`		ORDER BY transaction_date DESC, created_at DESC, id DESC
-		LIMIT $%d
-	`, len(args))
+		LIMIT $%d OFFSET $%d
+	`, len(args)-1, len(args))
 
 	rows, err := repository.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return TransactionPage{}, err
 	}
 	defer func() { _ = rows.Close() }()
 
-	var transactions []Transaction
+	page := TransactionPage{Transactions: []Transaction{}}
 	for rows.Next() {
 		var tx Transaction
 		if err := rows.Scan(
@@ -121,21 +142,22 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 			&tx.Currency,
 			&tx.Description,
 			&tx.TransactionDate,
+			&page.Total,
 		); err != nil {
-			return nil, err
+			return TransactionPage{}, err
 		}
 
-		transactions = append(transactions, tx)
+		page.Transactions = append(page.Transactions, tx)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return TransactionPage{}, err
 	}
 
-	return transactions, nil
+	return page, nil
 }
 
-func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Context, filter ListAuditEventsFilter) ([]AuditEvent, error) {
+func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Context, filter ListAuditEventsFilter) (AuditEventPage, error) {
 	query := `
 		SELECT
 			'audit-' || id || '-created' AS id,
@@ -143,33 +165,44 @@ func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Con
 			id AS transaction_id,
 			institution_id,
 			created_at::text AS occurred_at,
-			'Transaction ' || id || ' was created.' AS summary
+			'Transaction ' || id || ' was created.' AS summary,
+			COUNT(*) OVER() AS total_count
 		FROM treasury_transactions
 	`
-	args := make([]any, 0, 2)
-	conditions := make([]string, 0, 1)
+	args := make([]any, 0, 5)
+	conditions := make([]string, 0, 3)
 
 	if filter.InstitutionID != "" {
 		args = append(args, filter.InstitutionID)
 		conditions = append(conditions, fmt.Sprintf("institution_id = $%d", len(args)))
 	}
 
+	if filter.DateFrom != "" {
+		args = append(args, filter.DateFrom)
+		conditions = append(conditions, fmt.Sprintf("created_at >= $%d::date", len(args)))
+	}
+
+	if filter.DateTo != "" {
+		args = append(args, filter.DateTo)
+		conditions = append(conditions, fmt.Sprintf("created_at < ($%d::date + INTERVAL '1 day')", len(args)))
+	}
+
 	if len(conditions) > 0 {
 		query += "WHERE " + strings.Join(conditions, " AND ") + "\n"
 	}
 
-	args = append(args, filter.Limit)
+	args = append(args, filter.PageSize, filter.Offset())
 	query += fmt.Sprintf(`		ORDER BY created_at DESC, id DESC
-		LIMIT $%d
-	`, len(args))
+		LIMIT $%d OFFSET $%d
+	`, len(args)-1, len(args))
 
 	rows, err := repository.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return AuditEventPage{}, err
 	}
 	defer func() { _ = rows.Close() }()
 
-	var events []AuditEvent
+	page := AuditEventPage{Events: []AuditEvent{}}
 	for rows.Next() {
 		var event AuditEvent
 		if err := rows.Scan(
@@ -179,16 +212,17 @@ func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Con
 			&event.InstitutionID,
 			&event.OccurredAt,
 			&event.Summary,
+			&page.Total,
 		); err != nil {
-			return nil, err
+			return AuditEventPage{}, err
 		}
 
-		events = append(events, event)
+		page.Events = append(page.Events, event)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return AuditEventPage{}, err
 	}
 
-	return events, nil
+	return page, nil
 }

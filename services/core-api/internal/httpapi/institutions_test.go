@@ -29,7 +29,7 @@ func TestListInstitutionsEndpointReturnsInstitutions(t *testing.T) {
 	NewRouter(WithInstitutionRepository(repository)).ServeHTTP(response, request)
 
 	require.Equal(t, http.StatusOK, response.Code)
-	require.Equal(t, treasury.ListInstitutionsFilter{Limit: 25}, repository.filter)
+	require.Equal(t, treasury.ListInstitutionsFilter{Pagination: treasury.Pagination{Page: 1, PageSize: 25}}, repository.filter)
 
 	var body struct {
 		Institutions []struct {
@@ -55,7 +55,7 @@ type recordingInstitutionRepository struct {
 	filter       treasury.ListInstitutionsFilter
 }
 
-func (repository *recordingInstitutionRepository) ListInstitutions(ctx context.Context, filter treasury.ListInstitutionsFilter) ([]treasury.Institution, error) {
+func (repository *recordingInstitutionRepository) ListInstitutions(ctx context.Context, filter treasury.ListInstitutionsFilter) (treasury.InstitutionPage, error) {
 	repository.filter = filter
-	return repository.institutions, nil
+	return treasury.InstitutionPage{Institutions: repository.institutions, Total: len(repository.institutions)}, nil
 }

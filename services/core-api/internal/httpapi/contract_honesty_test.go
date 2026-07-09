@@ -18,8 +18,8 @@ func (duplicateRejectingRepository) Save(context.Context, treasury.Transaction) 
 	return fmt.Errorf("saving transaction: %w", treasury.ErrDuplicateTransaction)
 }
 
-func (duplicateRejectingRepository) List(context.Context, treasury.ListTransactionsFilter) ([]treasury.Transaction, error) {
-	return nil, nil
+func (duplicateRejectingRepository) List(context.Context, treasury.ListTransactionsFilter) (treasury.TransactionPage, error) {
+	return treasury.TransactionPage{}, nil
 }
 
 type unknownInstitutionRepository struct{}
@@ -28,8 +28,8 @@ func (unknownInstitutionRepository) Save(context.Context, treasury.Transaction) 
 	return fmt.Errorf("saving transaction: %w", treasury.ErrUnknownInstitution)
 }
 
-func (unknownInstitutionRepository) List(context.Context, treasury.ListTransactionsFilter) ([]treasury.Transaction, error) {
-	return nil, nil
+func (unknownInstitutionRepository) List(context.Context, treasury.ListTransactionsFilter) (treasury.TransactionPage, error) {
+	return treasury.TransactionPage{}, nil
 }
 
 func TestCreateTransactionReturns409ForDuplicateID(t *testing.T) {
@@ -86,12 +86,12 @@ func TestListEndpointsRejectMalformedLimitWithInvalidLimitError(t *testing.T) {
 
 type stubInstitutionRepository struct{}
 
-func (stubInstitutionRepository) ListInstitutions(context.Context, treasury.ListInstitutionsFilter) ([]treasury.Institution, error) {
-	return nil, nil
+func (stubInstitutionRepository) ListInstitutions(context.Context, treasury.ListInstitutionsFilter) (treasury.InstitutionPage, error) {
+	return treasury.InstitutionPage{}, nil
 }
 
 type stubAuditEventRepository struct{}
 
-func (stubAuditEventRepository) ListAuditEvents(context.Context, treasury.ListAuditEventsFilter) ([]treasury.AuditEvent, error) {
-	return nil, nil
+func (stubAuditEventRepository) ListAuditEvents(context.Context, treasury.ListAuditEventsFilter) (treasury.AuditEventPage, error) {
+	return treasury.AuditEventPage{}, nil
 }

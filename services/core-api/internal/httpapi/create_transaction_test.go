@@ -95,7 +95,7 @@ func (repository *recordingTransactionRepository) Save(ctx context.Context, tx t
 	return nil
 }
 
-func (repository *recordingTransactionRepository) List(ctx context.Context, filter treasury.ListTransactionsFilter) ([]treasury.Transaction, error) {
+func (repository *recordingTransactionRepository) List(ctx context.Context, filter treasury.ListTransactionsFilter) (treasury.TransactionPage, error) {
 	repository.filter = filter
-	return repository.transactions, nil
+	return treasury.TransactionPage{Transactions: repository.transactions, Total: len(repository.transactions)}, nil
 }

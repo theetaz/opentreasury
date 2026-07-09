@@ -3,6 +3,8 @@ package treasury
 import (
 	"context"
 	"database/sql"
+	"fmt"
+	"strings"
 )
 
 type PostgresInstitutionRepository struct {
@@ -13,26 +15,41 @@ func NewPostgresInstitutionRepository(db *sql.DB) *PostgresInstitutionRepository
 	return &PostgresInstitutionRepository{db: db}
 }
 
-func (repository *PostgresInstitutionRepository) ListInstitutions(ctx context.Context, filter ListInstitutionsFilter) ([]Institution, error) {
+func (repository *PostgresInstitutionRepository) ListInstitutions(ctx context.Context, filter ListInstitutionsFilter) (InstitutionPage, error) {
 	query := `
 		SELECT
 			id,
 			name,
 			type,
 			country_code,
-			status
+			status,
+			COUNT(*) OVER() AS total_count
 		FROM treasury_institutions
-		ORDER BY name ASC, id ASC
-		LIMIT $1
 	`
+	args := make([]any, 0, 3)
+	conditions := make([]string, 0, 1)
 
-	rows, err := repository.db.QueryContext(ctx, query, filter.Limit)
+	if filter.Status != "" {
+		args = append(args, filter.Status)
+		conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
+	}
+
+	if len(conditions) > 0 {
+		query += "WHERE " + strings.Join(conditions, " AND ") + "\n"
+	}
+
+	args = append(args, filter.PageSize, filter.Offset())
+	query += fmt.Sprintf(`		ORDER BY name ASC, id ASC
+		LIMIT $%d OFFSET $%d
+	`, len(args)-1, len(args))
+
+	rows, err := repository.db.QueryContext(ctx, query, args...)
 	if err != nil {
-		return nil, err
+		return InstitutionPage{}, err
 	}
 	defer func() { _ = rows.Close() }()
 
-	var institutions []Institution
+	page := InstitutionPage{Institutions: []Institution{}}
 	for rows.Next() {
 		var institution Institution
 		if err := rows.Scan(
@@ -41,16 +58,17 @@ func (repository *PostgresInstitutionRepository) ListInstitutions(ctx context.Co
 			&institution.Type,
 			&institution.CountryCode,
 			&institution.Status,
+			&page.Total,
 		); err != nil {
-			return nil, err
+			return InstitutionPage{}, err
 		}
 
-		institutions = append(institutions, institution)
+		page.Institutions = append(page.Institutions, institution)
 	}
 
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return InstitutionPage{}, err
 	}
 
-	return institutions, nil
+	return page, nil
 }

@@ -75,8 +75,9 @@ func TestNewServerUsesDatabaseBackedInstitutionRepository(t *testing.T) {
 		"type",
 		"country_code",
 		"status",
+		"total_count",
 	}).
-		AddRow("minfin", "Ministry of Finance", "MINISTRY", "KE", "ACTIVE")
+		AddRow("minfin", "Ministry of Finance", "MINISTRY", "KE", "ACTIVE", 1)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT
@@ -84,12 +85,13 @@ func TestNewServerUsesDatabaseBackedInstitutionRepository(t *testing.T) {
 			name,
 			type,
 			country_code,
-			status
+			status,
+			COUNT(*) OVER() AS total_count
 		FROM treasury_institutions
 		ORDER BY name ASC, id ASC
-		LIMIT $1
+		LIMIT $1 OFFSET $2
 	`)).
-		WithArgs(25).
+		WithArgs(25, 0).
 		WillReturnRows(rows)
 
 	server.Handler.ServeHTTP(response, request)

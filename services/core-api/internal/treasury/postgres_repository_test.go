@@ -59,17 +59,9 @@ func TestPostgresTransactionRepository_ListReturnsFilteredTransactions(t *testin
 	db, mock := newMockDB(t)
 	repository := NewPostgresTransactionRepository(db)
 
-	rows := sqlmock.NewRows([]string{
-		"id",
-		"institution_id",
-		"fiscal_year",
-		"amount_minor",
-		"currency",
-		"description",
-		"transaction_date",
-	}).
-		AddRow("txn-2026-0002", "minfin", 2026, int64(450075), "USD", "Quarterly grant release", "2026-06-29").
-		AddRow("txn-2026-0001", "minfin", 2026, int64(125000), "USD", "Road maintenance payment", "2026-06-28")
+	rows := sqlmock.NewRows(transactionColumns()).
+		AddRow("txn-2026-0002", "minfin", 2026, int64(450075), "USD", "Quarterly grant release", "2026-06-29", 2).
+		AddRow("txn-2026-0001", "minfin", 2026, int64(125000), "USD", "Road maintenance payment", "2026-06-28", 2)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT
@@ -79,25 +71,27 @@ func TestPostgresTransactionRepository_ListReturnsFilteredTransactions(t *testin
 			amount_minor,
 			currency,
 			description,
-			transaction_date::text
+			transaction_date::text,
+			COUNT(*) OVER() AS total_count
 		FROM treasury_transactions
 		WHERE institution_id = $1 AND fiscal_year = $2
 		ORDER BY transaction_date DESC, created_at DESC, id DESC
-		LIMIT $3
+		LIMIT $3 OFFSET $4
 	`)).
-		WithArgs("minfin", 2026, 25).
+		WithArgs("minfin", 2026, 25, 0).
 		WillReturnRows(rows)
 
-	transactions, err := repository.List(context.Background(), ListTransactionsFilter{
+	page, err := repository.List(context.Background(), ListTransactionsFilter{
 		InstitutionID: "minfin",
 		FiscalYear:    2026,
-		Limit:         25,
+		Pagination:    Pagination{Page: 1, PageSize: 25},
 	})
 
 	require.NoError(t, err)
-	require.Len(t, transactions, 2)
-	require.Equal(t, "txn-2026-0002", transactions[0].ID)
-	require.Equal(t, int64(125000), transactions[1].AmountMinor)
+	require.Len(t, page.Transactions, 2)
+	require.Equal(t, 2, page.Total)
+	require.Equal(t, "txn-2026-0002", page.Transactions[0].ID)
+	require.Equal(t, int64(125000), page.Transactions[1].AmountMinor)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -105,16 +99,8 @@ func TestPostgresTransactionRepository_ListReturnsRecentTransactions(t *testing.
 	db, mock := newMockDB(t)
 	repository := NewPostgresTransactionRepository(db)
 
-	rows := sqlmock.NewRows([]string{
-		"id",
-		"institution_id",
-		"fiscal_year",
-		"amount_minor",
-		"currency",
-		"description",
-		"transaction_date",
-	}).
-		AddRow("txn-2026-0002", "minfin", 2026, int64(450075), "USD", "Quarterly grant release", "2026-06-29")
+	rows := sqlmock.NewRows(transactionColumns()).
+		AddRow("txn-2026-0002", "minfin", 2026, int64(450075), "USD", "Quarterly grant release", "2026-06-29", 1)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT
@@ -124,21 +110,22 @@ func TestPostgresTransactionRepository_ListReturnsRecentTransactions(t *testing.
 			amount_minor,
 			currency,
 			description,
-			transaction_date::text
+			transaction_date::text,
+			COUNT(*) OVER() AS total_count
 		FROM treasury_transactions
 		ORDER BY transaction_date DESC, created_at DESC, id DESC
-		LIMIT $1
+		LIMIT $1 OFFSET $2
 	`)).
-		WithArgs(50).
+		WithArgs(50, 0).
 		WillReturnRows(rows)
 
-	transactions, err := repository.List(context.Background(), ListTransactionsFilter{
-		Limit: 50,
+	page, err := repository.List(context.Background(), ListTransactionsFilter{
+		Pagination: Pagination{Page: 1, PageSize: 50},
 	})
 
 	require.NoError(t, err)
-	require.Len(t, transactions, 1)
-	require.Equal(t, "txn-2026-0002", transactions[0].ID)
+	require.Len(t, page.Transactions, 1)
+	require.Equal(t, "txn-2026-0002", page.Transactions[0].ID)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -153,6 +140,7 @@ func TestPostgresTransactionRepository_ListAuditEventsReturnsTransactionCreation
 		"institution_id",
 		"occurred_at",
 		"summary",
+		"total_count",
 	}).
 		AddRow(
 			"audit-txn-2026-0001-created",
@@ -161,6 +149,7 @@ func TestPostgresTransactionRepository_ListAuditEventsReturnsTransactionCreation
 			"minfin",
 			"2026-06-28T10:24:28Z",
 			"Transaction txn-2026-0001 was created.",
+			1,
 		)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
@@ -170,26 +159,27 @@ func TestPostgresTransactionRepository_ListAuditEventsReturnsTransactionCreation
 			id AS transaction_id,
 			institution_id,
 			created_at::text AS occurred_at,
-			'Transaction ' || id || ' was created.' AS summary
+			'Transaction ' || id || ' was created.' AS summary,
+			COUNT(*) OVER() AS total_count
 		FROM treasury_transactions
 		WHERE institution_id = $1
 		ORDER BY created_at DESC, id DESC
-		LIMIT $2
+		LIMIT $2 OFFSET $3
 	`)).
-		WithArgs("minfin", 25).
+		WithArgs("minfin", 25, 0).
 		WillReturnRows(rows)
 
-	events, err := repository.ListAuditEvents(context.Background(), ListAuditEventsFilter{
+	page, err := repository.ListAuditEvents(context.Background(), ListAuditEventsFilter{
 		InstitutionID: "minfin",
-		Limit:         25,
+		Pagination:    Pagination{Page: 1, PageSize: 25},
 	})
 
 	require.NoError(t, err)
-	require.Len(t, events, 1)
-	require.Equal(t, "audit-txn-2026-0001-created", events[0].ID)
-	require.Equal(t, "TRANSACTION_CREATED", events[0].EventType)
-	require.Equal(t, "txn-2026-0001", events[0].TransactionID)
-	require.Equal(t, "minfin", events[0].InstitutionID)
+	require.Len(t, page.Events, 1)
+	require.Equal(t, "audit-txn-2026-0001-created", page.Events[0].ID)
+	require.Equal(t, "TRANSACTION_CREATED", page.Events[0].EventType)
+	require.Equal(t, "txn-2026-0001", page.Events[0].TransactionID)
+	require.Equal(t, "minfin", page.Events[0].InstitutionID)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
@@ -203,8 +193,9 @@ func TestPostgresInstitutionRepository_ListReturnsInstitutions(t *testing.T) {
 		"type",
 		"country_code",
 		"status",
+		"total_count",
 	}).
-		AddRow("minfin", "Ministry of Finance", "MINISTRY", "KE", "ACTIVE")
+		AddRow("minfin", "Ministry of Finance", "MINISTRY", "KE", "ACTIVE", 1)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT
@@ -212,25 +203,26 @@ func TestPostgresInstitutionRepository_ListReturnsInstitutions(t *testing.T) {
 			name,
 			type,
 			country_code,
-			status
+			status,
+			COUNT(*) OVER() AS total_count
 		FROM treasury_institutions
 		ORDER BY name ASC, id ASC
-		LIMIT $1
+		LIMIT $1 OFFSET $2
 	`)).
-		WithArgs(25).
+		WithArgs(25, 0).
 		WillReturnRows(rows)
 
-	institutions, err := repository.ListInstitutions(context.Background(), ListInstitutionsFilter{
-		Limit: 25,
+	page, err := repository.ListInstitutions(context.Background(), ListInstitutionsFilter{
+		Pagination: Pagination{Page: 1, PageSize: 25},
 	})
 
 	require.NoError(t, err)
-	require.Len(t, institutions, 1)
-	require.Equal(t, "minfin", institutions[0].ID)
-	require.Equal(t, "Ministry of Finance", institutions[0].Name)
-	require.Equal(t, "MINISTRY", institutions[0].Type)
-	require.Equal(t, "KE", institutions[0].CountryCode)
-	require.Equal(t, "ACTIVE", institutions[0].Status)
+	require.Len(t, page.Institutions, 1)
+	require.Equal(t, "minfin", page.Institutions[0].ID)
+	require.Equal(t, "Ministry of Finance", page.Institutions[0].Name)
+	require.Equal(t, "MINISTRY", page.Institutions[0].Type)
+	require.Equal(t, "KE", page.Institutions[0].CountryCode)
+	require.Equal(t, "ACTIVE", page.Institutions[0].Status)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 
