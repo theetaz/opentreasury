@@ -226,7 +226,15 @@ const simulatedBalances: Balance[] = [
   { institutionId: "minfin", accountCode: "6202", accountName: "Currency and deposits", accountType: "ASSET", currency: "USD", balanceMinor: 121000 }
 ];
 
+import { currentAccessToken } from "@/stores/auth";
+
 const apiBaseUrl = import.meta.env.VITE_CORE_API_URL;
+
+/** Bearer token header when authenticated; empty in demo mode. */
+function authHeaders(): Record<string, string> {
+  const token = currentAccessToken();
+  return token ? { Authorization: `Bearer ${token}` } : {};
+}
 
 const simulatedTransactions: TreasuryTransaction[] = [
   {
@@ -316,7 +324,7 @@ export async function checkCoreApiHealth(): Promise<HealthCheckResult> {
 
   const startedAt = Date.now();
   try {
-    const response = await fetch(`${apiBaseUrl}/healthz`);
+    const response = await fetch(`${apiBaseUrl}/healthz`, { headers: authHeaders() });
     if (!response.ok) {
       return {
         ok: false,
@@ -345,7 +353,7 @@ export async function listTransactions(filter: TransactionListFilter = { limit: 
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}${buildTransactionsPath(filter)}`);
+    const response = await fetch(`${apiBaseUrl}${buildTransactionsPath(filter)}`, { headers: authHeaders() });
 
     if (!response.ok) {
       const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
@@ -372,7 +380,7 @@ export async function listAuditEvents(filter: AuditEventListFilter = { limit: 5 
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}${buildAuditEventsPath(filter)}`);
+    const response = await fetch(`${apiBaseUrl}${buildAuditEventsPath(filter)}`, { headers: authHeaders() });
 
     if (!response.ok) {
       const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
@@ -399,7 +407,7 @@ export async function listInstitutions(filter: InstitutionListFilter = { limit: 
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}${buildInstitutionsPath(filter)}`);
+    const response = await fetch(`${apiBaseUrl}${buildInstitutionsPath(filter)}`, { headers: authHeaders() });
 
     if (!response.ok) {
       const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
@@ -449,7 +457,7 @@ export async function listAccounts(filter: AccountListFilter = {}): Promise<Acco
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}${buildAccountsPath(filter)}`);
+    const response = await fetch(`${apiBaseUrl}${buildAccountsPath(filter)}`, { headers: authHeaders() });
 
     if (!response.ok) {
       const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
@@ -496,7 +504,7 @@ export async function listJournalEntries(filter: JournalEntryListFilter = {}): P
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}${buildJournalEntriesPath(filter)}`);
+    const response = await fetch(`${apiBaseUrl}${buildJournalEntriesPath(filter)}`, { headers: authHeaders() });
     if (!response.ok) {
       const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
       return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
@@ -524,7 +532,7 @@ export async function postJournalEntry(entry: JournalEntryInput): Promise<ApiRes
   try {
     const response = await fetch(`${apiBaseUrl}/v1/journal-entries`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", ...authHeaders() },
       body: JSON.stringify(entry)
     });
     if (!response.ok) {
@@ -557,7 +565,7 @@ export async function listBalances(filter: BalanceListFilter = {}): Promise<Bala
   }
 
   try {
-    const response = await fetch(`${apiBaseUrl}${buildBalancesPath(filter)}`);
+    const response = await fetch(`${apiBaseUrl}${buildBalancesPath(filter)}`, { headers: authHeaders() });
     if (!response.ok) {
       const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
       return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
@@ -595,7 +603,8 @@ async function postTransaction(path: string, transaction: TreasuryTransaction): 
     const response = await fetch(`${apiBaseUrl}${path}`, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        ...authHeaders()
       },
       body: JSON.stringify(transaction)
     });

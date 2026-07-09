@@ -26,14 +26,34 @@ testcontainers), and the web app tests + typechecks.
 make up
 ```
 
-Builds and starts everything in Docker: Postgres, migrations, seed data, the
-core API, and the web app.
+Builds and starts everything in Docker: Postgres, migrations, seed data,
+Keycloak (identity), the core API, and the web app.
 
 - Dashboard (UAT): **http://localhost:5173**
 - Core API: **http://localhost:8080** (`/healthz`, `/v1/...`)
+- Keycloak: **http://localhost:8085** (admin `admin`/`admin`)
 
 `make down` stops the stack; `make db-reset` wipes the data volume and
 re-seeds.
+
+## Authentication & Authorization
+
+The stack runs with authentication enabled. Sign in at the dashboard with one
+of the seeded demo users (realm `opentreasury`):
+
+| User | Password | Role | Scope |
+|---|---|---|---|
+| `treasury-admin` | `treasury` | treasury-admin | all institutions, read + write |
+| `institution-user` | `institution` | institution-user | own institution (`minfin`) only |
+| `auditor` | `auditor` | auditor | all institutions, read-only |
+
+The core API verifies Keycloak-issued bearer tokens (OIDC) and authorizes each
+request against the Rego policy in `policies/opa/authz.rego` (embedded via the
+OPA Go SDK). Institution users are scoped to their own institution; the chart
+of accounts is shared reference data readable by all.
+
+Authentication is opt-in by configuration: with `OPENTREASURY_OIDC_ISSUER_URL`
+(API) and `VITE_OIDC_AUTHORITY` (web) unset, both run open for quick local work.
 
 ## Local Database
 

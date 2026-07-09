@@ -114,6 +114,10 @@ func (config routerConfig) postJournalEntry(response http.ResponseWriter, reques
 		return
 	}
 
+	if !config.authorized(response, request, entry.InstitutionID) {
+		return
+	}
+
 	ctx := treasury.ContextWithAuditMetadata(request.Context(), treasury.AuditMetadata{
 		Actor:     "system",
 		RequestID: requestIDFromContext(request.Context()),
@@ -141,6 +145,9 @@ func writeEntryError(response http.ResponseWriter, request *http.Request, config
 }
 
 func (config routerConfig) listJournalEntries(response http.ResponseWriter, request *http.Request) {
+	if !config.authorized(response, request, request.URL.Query().Get("institutionId")) {
+		return
+	}
 	if config.journalRepository == nil {
 		writeError(response, http.StatusServiceUnavailable, "journal repository is not configured")
 		return
@@ -194,6 +201,9 @@ func toEntryResponse(entry treasury.JournalEntry) journalEntryResponse {
 }
 
 func (config routerConfig) listBalances(response http.ResponseWriter, request *http.Request) {
+	if !config.authorized(response, request, request.URL.Query().Get("institutionId")) {
+		return
+	}
 	if config.journalRepository == nil {
 		writeError(response, http.StatusServiceUnavailable, "balance repository is not configured")
 		return

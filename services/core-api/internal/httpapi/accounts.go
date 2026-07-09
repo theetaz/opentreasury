@@ -35,6 +35,9 @@ type listAccountsResponse struct {
 }
 
 func (config routerConfig) listAccounts(response http.ResponseWriter, request *http.Request) {
+	if !config.authorized(response, request, "") {
+		return
+	}
 	if config.accountRepository == nil {
 		writeError(response, http.StatusServiceUnavailable, "account repository is not configured")
 		return

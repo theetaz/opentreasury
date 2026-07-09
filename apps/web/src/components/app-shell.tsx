@@ -2,6 +2,7 @@ import { Outlet, useLocation } from "react-router";
 import { AppSidebar } from "@/components/app-sidebar";
 import { HealthIndicator } from "@/components/health-indicator";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { UserMenu } from "@/components/user-menu";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import { SidebarInset, SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
@@ -39,6 +40,7 @@ export function AppShell() {
           <div className="ml-auto flex items-center gap-3">
             <HealthIndicator />
             <ThemeToggle />
+            <UserMenu />
           </div>
         </header>
         <main className="flex flex-1 flex-col gap-4 p-4 md:p-6">

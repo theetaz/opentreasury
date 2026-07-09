@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/url"
 	"strconv"
+	"strings"
 	"time"
 
+	"github.com/opentreasury/opentreasury/services/core-api/internal/auth"
 	"github.com/opentreasury/opentreasury/services/core-api/internal/treasury"
 )
 
@@ -38,6 +40,8 @@ type routerConfig struct {
 	institutionRepository InstitutionRepository
 	accountRepository     AccountRepository
 	journalRepository     JournalRepository
+	tokenVerifier         auth.TokenVerifier
+	authorizer            Authorizer
 	allowedOrigins        map[string]struct{}
 	logger                *slog.Logger
 	readinessChecks       []func(context.Context) error
@@ -88,6 +92,24 @@ func WithMaxBodyBytes(limit int64) RouterOption {
 	}
 }
 
+// WithTokenVerifier turns on bearer-token authentication. When set, every
+// route except health/readiness requires a valid token; when nil (the
+// default), the API runs unauthenticated for local development.
+func WithTokenVerifier(verifier auth.TokenVerifier) RouterOption {
+	return func(config *routerConfig) {
+		config.tokenVerifier = verifier
+	}
+}
+
+// WithAuthorizer turns on policy-based authorization. When set, each request
+// is checked against the policy (role × action × resource × institution scope)
+// after authentication.
+func WithAuthorizer(authorizer Authorizer) RouterOption {
+	return func(config *routerConfig) {
+		config.authorizer = authorizer
+	}
+}
+
 func WithAllowedOrigins(origins []string) RouterOption {
 	return func(config *routerConfig) {
 		config.allowedOrigins = make(map[string]struct{}, len(origins))
@@ -121,12 +143,26 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("POST /v1/transactions", config.createTransaction)
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
 
-	handler := config.withCORS(mux)
+	var handler http.Handler = mux
+	if config.tokenVerifier != nil {
+		handler = auth.Middleware(config.tokenVerifier, isPublicPath, handler)
+	}
+	handler = config.withCORS(handler)
 	handler = withMaxBodyBytes(config.maxBodyBytes, handler)
 	handler = withRecovery(config.logger, handler)
 	handler = withRequestLogging(config.logger, handler)
 	handler = withRequestID(handler)
 	return handler
+}
+
+// isPublicPath matches routes served without authentication: liveness/
+// readiness probes and the anonymous public read tier.
+func isPublicPath(request *http.Request) bool {
+	path := request.URL.Path
+	if path == "/healthz" || path == "/readyz" {
+		return true
+	}
+	return strings.HasPrefix(path, "/public/")
 }
 
 func (config routerConfig) withCORS(next http.Handler) http.Handler {
@@ -139,7 +175,7 @@ func (config routerConfig) withCORS(next http.Handler) http.Handler {
 		if _, ok := config.allowedOrigins[origin]; ok {
 			response.Header().Set("Access-Control-Allow-Origin", origin)
 			response.Header().Set("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-			response.Header().Set("Access-Control-Allow-Headers", "Content-Type")
+			response.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 			response.Header().Set("Vary", "Origin")
 		}
 
@@ -257,6 +293,10 @@ func (config routerConfig) createTransaction(response http.ResponseWriter, reque
 		return
 	}
 
+	if !config.authorized(response, request, tx.InstitutionID) {
+		return
+	}
+
 	if config.transactionRepository == nil {
 		writeError(response, http.StatusServiceUnavailable, "transaction repository is not configured")
 		return
@@ -287,6 +327,9 @@ func (config routerConfig) createTransaction(response http.ResponseWriter, reque
 }
 
 func (config routerConfig) listTransactions(response http.ResponseWriter, request *http.Request) {
+	if !config.authorized(response, request, request.URL.Query().Get("institutionId")) {
+		return
+	}
 	if config.transactionRepository == nil {
 		writeError(response, http.StatusServiceUnavailable, "transaction repository is not configured")
 		return
@@ -312,6 +355,9 @@ func (config routerConfig) listTransactions(response http.ResponseWriter, reques
 }
 
 func (config routerConfig) listAuditEvents(response http.ResponseWriter, request *http.Request) {
+	if !config.authorized(response, request, request.URL.Query().Get("institutionId")) {
+		return
+	}
 	if config.auditEventRepository == nil {
 		writeError(response, http.StatusServiceUnavailable, "audit event repository is not configured")
 		return
@@ -337,6 +383,9 @@ func (config routerConfig) listAuditEvents(response http.ResponseWriter, request
 }
 
 func (config routerConfig) listInstitutions(response http.ResponseWriter, request *http.Request) {
+	if !config.authorized(response, request, "") {
+		return
+	}
 	if config.institutionRepository == nil {
 		writeError(response, http.StatusServiceUnavailable, "institution repository is not configured")
 		return

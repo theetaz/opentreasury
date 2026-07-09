@@ -11,7 +11,11 @@ RUN corepack pnpm install --filter @opentreasury/web --filter @opentreasury/type
 COPY apps/web apps/web
 COPY packages packages
 ARG VITE_CORE_API_URL
+ARG VITE_OIDC_AUTHORITY
+ARG VITE_OIDC_CLIENT_ID
 ENV VITE_CORE_API_URL=${VITE_CORE_API_URL}
+ENV VITE_OIDC_AUTHORITY=${VITE_OIDC_AUTHORITY}
+ENV VITE_OIDC_CLIENT_ID=${VITE_OIDC_CLIENT_ID}
 RUN corepack pnpm --filter @opentreasury/web build
 
 # Serve

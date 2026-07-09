@@ -59,7 +59,7 @@ func TestRunFailsFastWhenAddressIsUnusable(t *testing.T) {
 }
 
 func TestNewServerConfiguresTimeouts(t *testing.T) {
-	server := newServer(config{addr: ":0"}, nil)
+	server := newServer(context.Background(), config{addr: ":0"}, nil, slog.New(slog.DiscardHandler))
 
 	require.Greater(t, server.ReadHeaderTimeout, time.Duration(0))
 	require.Greater(t, server.ReadTimeout, time.Duration(0))
@@ -85,7 +85,7 @@ func TestReadyzReports503WhenDatabaseIsDown(t *testing.T) {
 	require.NoError(t, err)
 	defer func() { require.NoError(t, closeDatabase()) }()
 
-	server := newServer(config{addr: ":0"}, db)
+	server := newServer(context.Background(), config{addr: ":0"}, db, slog.New(slog.DiscardHandler))
 
 	request := httptest.NewRequest(http.MethodGet, "/readyz", nil)
 	recorder := httptest.NewRecorder()
