@@ -104,13 +104,22 @@ The initial verification runs Go tests for scaffolded Go modules. JavaScript che
 
 ## Contributing
 
-Contributions should keep the platform open-source, auditable, and practical for public-sector deployment.
+See [CONTRIBUTING.md](CONTRIBUTING.md) for the development workflow (test-driven, feature branches into `develop`), and [GOVERNANCE.md](GOVERNANCE.md) for how decisions are made. Community standards are set by the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-- Keep changes focused and reviewable.
-- Add tests with behavior changes.
-- Document public APIs with OpenAPI once endpoints are introduced.
+Guiding expectations:
+
+- Keep changes focused and reviewable, with tests written first.
+- Document public APIs with OpenAPI in the same change.
 - Avoid proprietary hosted-only dependencies unless there is a clear fallback and documented rationale.
-- Keep generated files reproducible and avoid committing build output.
+- Record decisions that constrain future contributors as ADRs in [docs/adr/](docs/adr/).
+
+## Security
+
+Report vulnerabilities privately — see [SECURITY.md](SECURITY.md). Never open public issues for security problems.
+
+## Roadmap
+
+The product blueprint, current-state audit, and phased implementation plan live in [docs/opentreasury-blueprint.md](docs/opentreasury-blueprint.md).
 
 ## License
 
