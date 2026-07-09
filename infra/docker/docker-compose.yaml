@@ -94,6 +94,16 @@ services:
       keycloak:
         condition: service_healthy
 
+  ledger-gateway:
+    build:
+      context: ../../services/ledger-gateway
+    container_name: opentreasury-ledger-gateway
+    environment:
+      OPENTREASURY_DATABASE_DSN: postgres://opentreasury:opentreasury@postgres:5432/opentreasury_dev?sslmode=disable
+    depends_on:
+      seed:
+        condition: service_completed_successfully
+
   mcp-server:
     build:
       context: ../../services/mcp-server

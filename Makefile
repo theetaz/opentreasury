@@ -55,6 +55,8 @@ verify-go:
 verify-integration:
 	@echo "==> core API integration tests"
 	@(cd services/core-api && TESTCONTAINERS_RYUK_DISABLED=true go test -tags=integration -timeout 10m ./test/integration)
+	@echo "==> ledger gateway integration tests"
+	@(cd services/ledger-gateway && TESTCONTAINERS_RYUK_DISABLED=true go test -tags=integration -timeout 10m ./test/integration)
 
 verify-js:
 	@if [ -d node_modules ]; then \

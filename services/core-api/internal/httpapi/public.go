@@ -47,6 +47,7 @@ func (config routerConfig) registerPublicRoutes(mux *http.ServeMux) {
 	handle("GET /public/v1/accounts", config.publicAccounts)
 	handle("GET /public/v1/balances", config.publicBalances)
 	handle("GET /public/v1/journal-entries", config.publicJournalEntries)
+	handle("GET /public/v1/entries/{id}/proof", config.entryProof)
 }
 
 func (config routerConfig) writePublicList(response http.ResponseWriter, resource, key string, rows []map[string]any, pagination paginationResponse) {

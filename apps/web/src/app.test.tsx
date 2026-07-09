@@ -73,6 +73,19 @@ describe("journal and balances", () => {
     expect(await screen.findByText("USD 1,210.00")).toBeInTheDocument();
   });
 
+  it("verifies an entry's anchor proof in the browser", async () => {
+    const user = userEvent.setup();
+    renderApp("/journal");
+
+    // The first Verify button belongs to je-2026-0001 (top row).
+    const verifyButtons = await screen.findAllByRole("button", { name: /verify/i });
+    await user.click(verifyButtons[0]);
+
+    const dialog = await screen.findByRole("dialog");
+    // Demo mode synthesizes a self-consistent single-leaf proof → verified.
+    expect(await within(dialog).findByText(/anchored, unmodified/i)).toBeInTheDocument();
+  });
+
   it("blocks posting an unbalanced entry and enables it once balanced", async () => {
     const user = userEvent.setup();
     renderApp("/journal");
