@@ -9,7 +9,8 @@ paths:
   /healthz:
     get:
       operationId: getHealth
-      summary: Get service health
+      summary: Get service liveness
+      description: Liveness probe. Always returns 200 while the process serves traffic.
       responses:
         "200":
           description: Service is healthy.
@@ -17,6 +18,26 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthResponse"
+  /readyz:
+    get:
+      operationId: getReadiness
+      summary: Get service readiness
+      description: >-
+        Readiness probe. Returns 200 when all dependency checks (such as
+        database connectivity) pass, and 503 when any check fails.
+      responses:
+        "200":
+          description: Service is ready to serve requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: A dependency check failed; the service is not ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
   /v1/audit-events:
     get:
       operationId: listAuditEvents
@@ -186,6 +207,16 @@ components:
           type: string
           enum:
             - ok
+    ReadinessResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ready
+            - unavailable
     TreasuryTransaction:
       type: object
       required:
