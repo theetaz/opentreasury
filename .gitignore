@@ -41,3 +41,20 @@ kubeconfig*
 .local/
 .memory/
 transcripts/
+
+# AI assistant and agent files (kept local, never committed)
+AGENTS.md
+CLAUDE.md
+CLAUDE.local.md
+.claude/
+.claude-plugin/
+.cursor/
+.cursorrules
+.codex/
+.agents/
+.skills/
+SKILL.md
+.superpowers/
+.playwright-mcp/
+.mcp.json
+mcp.json
