@@ -15,6 +15,7 @@ func TestPostgresTransactionRepository_Save(t *testing.T) {
 	repository := NewPostgresTransactionRepository(db)
 	tx := validTransaction()
 
+	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(`
 		INSERT INTO treasury_transactions (
 			id,
@@ -36,6 +37,9 @@ func TestPostgresTransactionRepository_Save(t *testing.T) {
 			tx.TransactionDate,
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO audit_events")).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
 
 	err := repository.Save(context.Background(), tx)
 
@@ -126,60 +130,6 @@ func TestPostgresTransactionRepository_ListReturnsRecentTransactions(t *testing.
 	require.NoError(t, err)
 	require.Len(t, page.Transactions, 1)
 	require.Equal(t, "txn-2026-0002", page.Transactions[0].ID)
-	require.NoError(t, mock.ExpectationsWereMet())
-}
-
-func TestPostgresTransactionRepository_ListAuditEventsReturnsTransactionCreationEvents(t *testing.T) {
-	db, mock := newMockDB(t)
-	repository := NewPostgresTransactionRepository(db)
-
-	rows := sqlmock.NewRows([]string{
-		"id",
-		"event_type",
-		"transaction_id",
-		"institution_id",
-		"occurred_at",
-		"summary",
-		"total_count",
-	}).
-		AddRow(
-			"audit-txn-2026-0001-created",
-			"TRANSACTION_CREATED",
-			"txn-2026-0001",
-			"minfin",
-			"2026-06-28T10:24:28Z",
-			"Transaction txn-2026-0001 was created.",
-			1,
-		)
-
-	mock.ExpectQuery(regexp.QuoteMeta(`
-		SELECT
-			'audit-' || id || '-created' AS id,
-			'TRANSACTION_CREATED' AS event_type,
-			id AS transaction_id,
-			institution_id,
-			created_at::text AS occurred_at,
-			'Transaction ' || id || ' was created.' AS summary,
-			COUNT(*) OVER() AS total_count
-		FROM treasury_transactions
-		WHERE institution_id = $1
-		ORDER BY created_at DESC, id DESC
-		LIMIT $2 OFFSET $3
-	`)).
-		WithArgs("minfin", 25, 0).
-		WillReturnRows(rows)
-
-	page, err := repository.ListAuditEvents(context.Background(), ListAuditEventsFilter{
-		InstitutionID: "minfin",
-		Pagination:    Pagination{Page: 1, PageSize: 25},
-	})
-
-	require.NoError(t, err)
-	require.Len(t, page.Events, 1)
-	require.Equal(t, "audit-txn-2026-0001-created", page.Events[0].ID)
-	require.Equal(t, "TRANSACTION_CREATED", page.Events[0].EventType)
-	require.Equal(t, "txn-2026-0001", page.Events[0].TransactionID)
-	require.Equal(t, "minfin", page.Events[0].InstitutionID)
 	require.NoError(t, mock.ExpectationsWereMet())
 }
 

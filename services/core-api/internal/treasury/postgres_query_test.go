@@ -92,7 +92,7 @@ func TestListAuditEventsFiltersByOccurredRange(t *testing.T) {
 	rows := sqlmock.NewRows([]string{"id", "event_type", "transaction_id", "institution_id", "occurred_at", "summary", "total_count"}).
 		AddRow("audit-txn-1-created", "TRANSACTION_CREATED", "txn-1", "minfin", "2026-06-28T10:00:00Z", "Transaction txn-1 was created.", 1)
 
-	mock.ExpectQuery(regexp.QuoteMeta("created_at >= $")).
+	mock.ExpectQuery(regexp.QuoteMeta("occurred_at >= $")).
 		WithArgs("2026-06-01", "2026-06-30", 25, 0).
 		WillReturnRows(rows)
 

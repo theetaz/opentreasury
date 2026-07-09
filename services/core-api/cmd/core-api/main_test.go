@@ -43,6 +43,7 @@ func TestNewServerUsesDatabaseBackedTransactionRepository(t *testing.T) {
 	}`))
 	response := httptest.NewRecorder()
 
+	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta(`
 		INSERT INTO treasury_transactions (
 			id,
@@ -56,6 +57,9 @@ func TestNewServerUsesDatabaseBackedTransactionRepository(t *testing.T) {
 	`)).
 		WithArgs("txn-2026-0001", "minfin", 2026, int64(125000), "USD", "Road maintenance payment", "2026-06-28").
 		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO audit_events")).
+		WillReturnResult(sqlmock.NewResult(0, 1))
+	mock.ExpectCommit()
 
 	server.Handler.ServeHTTP(response, request)
 

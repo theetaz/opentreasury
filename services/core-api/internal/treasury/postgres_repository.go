@@ -23,12 +23,20 @@ func NewPostgresTransactionRepository(db *sql.DB) *PostgresTransactionRepository
 	return &PostgresTransactionRepository{db: db}
 }
 
+// Save records the transaction and its audit event in one database
+// transaction: no domain change ever lands without its audit row.
 func (repository *PostgresTransactionRepository) Save(ctx context.Context, tx Transaction) error {
 	if err := ValidateTransaction(tx); err != nil {
 		return err
 	}
 
-	_, err := repository.db.ExecContext(ctx, `
+	dbTx, err := repository.db.BeginTx(ctx, nil)
+	if err != nil {
+		return err
+	}
+	defer func() { _ = dbTx.Rollback() }()
+
+	_, err = dbTx.ExecContext(ctx, `
 		INSERT INTO treasury_transactions (
 			id,
 			institution_id,
@@ -47,7 +55,27 @@ func (repository *PostgresTransactionRepository) Save(ctx context.Context, tx Tr
 		tx.Description,
 		tx.TransactionDate,
 	)
-	return mapSaveError(tx.ID, err)
+	if err != nil {
+		return mapSaveError(tx.ID, err)
+	}
+
+	metadata := auditMetadataFromContext(ctx)
+	_, err = dbTx.ExecContext(ctx, `
+		INSERT INTO audit_events (event_type, transaction_id, institution_id, summary, actor, request_id)
+		VALUES ($1, $2, $3, $4, $5, $6)
+	`,
+		"TRANSACTION_CREATED",
+		tx.ID,
+		tx.InstitutionID,
+		"Transaction "+tx.ID+" was created.",
+		metadata.Actor,
+		metadata.RequestID,
+	)
+	if err != nil {
+		return err
+	}
+
+	return dbTx.Commit()
 }
 
 // mapSaveError converts constraint violations into domain errors the HTTP
@@ -160,14 +188,14 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Context, filter ListAuditEventsFilter) (AuditEventPage, error) {
 	query := `
 		SELECT
-			'audit-' || id || '-created' AS id,
-			'TRANSACTION_CREATED' AS event_type,
-			id AS transaction_id,
+			id,
+			event_type,
+			transaction_id,
 			institution_id,
-			created_at::text AS occurred_at,
-			'Transaction ' || id || ' was created.' AS summary,
+			occurred_at::text AS occurred_at,
+			summary,
 			COUNT(*) OVER() AS total_count
-		FROM treasury_transactions
+		FROM audit_events
 	`
 	args := make([]any, 0, 5)
 	conditions := make([]string, 0, 3)
@@ -179,12 +207,12 @@ func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Con
 
 	if filter.DateFrom != "" {
 		args = append(args, filter.DateFrom)
-		conditions = append(conditions, fmt.Sprintf("created_at >= $%d::date", len(args)))
+		conditions = append(conditions, fmt.Sprintf("occurred_at >= $%d::date", len(args)))
 	}
 
 	if filter.DateTo != "" {
 		args = append(args, filter.DateTo)
-		conditions = append(conditions, fmt.Sprintf("created_at < ($%d::date + INTERVAL '1 day')", len(args)))
+		conditions = append(conditions, fmt.Sprintf("occurred_at < ($%d::date + INTERVAL '1 day')", len(args)))
 	}
 
 	if len(conditions) > 0 {
@@ -192,7 +220,7 @@ func (repository *PostgresTransactionRepository) ListAuditEvents(ctx context.Con
 	}
 
 	args = append(args, filter.PageSize, filter.Offset())
-	query += fmt.Sprintf(`		ORDER BY created_at DESC, id DESC
+	query += fmt.Sprintf(`		ORDER BY occurred_at DESC, id DESC
 		LIMIT $%d OFFSET $%d
 	`, len(args)-1, len(args))
 
