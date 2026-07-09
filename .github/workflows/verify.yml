@@ -39,7 +39,7 @@ jobs:
           fi
 
       - name: golangci-lint (core-api)
-        uses: golangci/golangci-lint-action@v6
+        uses: golangci/golangci-lint-action@v7
         with:
           version: v2.6.2
           working-directory: services/core-api
