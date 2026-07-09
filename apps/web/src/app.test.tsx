@@ -46,6 +46,46 @@ describe("app shell", () => {
   });
 });
 
+describe("journal and balances", () => {
+  it("lists journal entries with their line counts", async () => {
+    renderApp("/journal");
+
+    expect(await screen.findByRole("heading", { name: /^journal$/i })).toBeInTheDocument();
+    expect(await screen.findByText("je-2026-0001")).toBeInTheDocument();
+    expect(await screen.findByText("Tax receipt into the treasury account")).toBeInTheDocument();
+  });
+
+  it("shows materialized balances with signed amounts", async () => {
+    renderApp("/balances");
+
+    expect(await screen.findByRole("heading", { name: /balances/i })).toBeInTheDocument();
+    expect(await screen.findByText("Currency and deposits")).toBeInTheDocument();
+    // The cash account carries a positive net; the revenue account is negative.
+    expect(await screen.findByText("USD 1,210.00")).toBeInTheDocument();
+  });
+
+  it("blocks posting an unbalanced entry and enables it once balanced", async () => {
+    const user = userEvent.setup();
+    renderApp("/journal");
+
+    await user.click(await screen.findByRole("button", { name: /post entry/i }));
+
+    const dialog = await screen.findByRole("dialog");
+    const post = within(dialog).getByRole("button", { name: /post entry/i });
+    expect(post).toBeDisabled();
+
+    await user.type(within(dialog).getByLabelText("Entry ID"), "je-test-1");
+    await user.type(within(dialog).getByLabelText("Line 1 amount"), "100");
+    await user.type(within(dialog).getByLabelText("Line 2 amount"), "60");
+    // Debits (100) != credits (60): still not balanced.
+    expect(within(dialog).getByText(/not balanced/i)).toBeInTheDocument();
+
+    await user.clear(within(dialog).getByLabelText("Line 2 amount"));
+    await user.type(within(dialog).getByLabelText("Line 2 amount"), "100");
+    expect(within(dialog).getByText(/^balanced$/i)).toBeInTheDocument();
+  });
+});
+
 describe("chart of accounts", () => {
   it("renders the reference accounts and filters by type from the URL", async () => {
     renderApp("/accounts?accountType=LIABILITY");

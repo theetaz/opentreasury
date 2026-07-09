@@ -4,12 +4,18 @@ import {
   createTransaction,
   listAccounts,
   listAuditEvents,
+  listBalances,
   listInstitutions,
+  listJournalEntries,
   listTransactions,
+  postJournalEntry,
   validateTransaction,
   type AccountListFilter,
   type AuditEventListFilter,
+  type BalanceListFilter,
   type InstitutionListFilter,
+  type JournalEntryInput,
+  type JournalEntryListFilter,
   type TransactionListFilter,
   type TreasuryTransaction
 } from "@/api";
@@ -18,6 +24,32 @@ export function useAccounts(filter: AccountListFilter) {
   return useQuery({
     queryKey: ["accounts", filter],
     queryFn: () => listAccounts(filter)
+  });
+}
+
+export function useJournalEntries(filter: JournalEntryListFilter) {
+  return useQuery({
+    queryKey: ["journal-entries", filter],
+    queryFn: () => listJournalEntries(filter)
+  });
+}
+
+export function useBalances(filter: BalanceListFilter) {
+  return useQuery({
+    queryKey: ["balances", filter],
+    queryFn: () => listBalances(filter)
+  });
+}
+
+export function usePostJournalEntry() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (entry: JournalEntryInput) => postJournalEntry(entry),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["journal-entries"] });
+      void queryClient.invalidateQueries({ queryKey: ["balances"] });
+      void queryClient.invalidateQueries({ queryKey: ["audit-events"] });
+    }
   });
 }
 

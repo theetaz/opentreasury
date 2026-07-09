@@ -50,6 +50,25 @@ func (conformanceRepository) ListAuditEvents(context.Context, treasury.ListAudit
 	}}}, nil
 }
 
+func (conformanceRepository) PostEntry(context.Context, treasury.JournalEntry) error { return nil }
+
+func (conformanceRepository) ListEntries(context.Context, treasury.ListJournalEntriesFilter) (treasury.JournalEntryPage, error) {
+	return treasury.JournalEntryPage{Total: 1, Entries: []treasury.JournalEntry{{
+		ID: "je-1", InstitutionID: "minfin", FiscalYear: 2026, EffectiveDate: "2026-06-28",
+		Description: "Tax receipt", Status: "POSTED", EntryType: "STANDARD",
+		Lines: []treasury.JournalLine{
+			{AccountCode: "6202", Direction: "DEBIT", AmountMinor: 125000, Currency: "USD"},
+			{AccountCode: "114", Direction: "CREDIT", AmountMinor: 125000, Currency: "USD"},
+		},
+	}}}, nil
+}
+
+func (conformanceRepository) ListBalances(context.Context, treasury.ListBalancesFilter) (treasury.BalancePage, error) {
+	return treasury.BalancePage{Total: 1, Balances: []treasury.Balance{
+		{InstitutionID: "minfin", AccountCode: "6202", AccountName: "Currency and deposits", AccountType: "ASSET", Currency: "USD", BalanceMinor: 125000},
+	}}, nil
+}
+
 func (conformanceRepository) ListAccounts(context.Context, treasury.ListAccountsFilter) (treasury.AccountPage, error) {
 	return treasury.AccountPage{Total: 1, Accounts: []treasury.Account{{
 		Code:        "1",
@@ -106,6 +125,8 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 		{name: "list institutions", method: http.MethodGet, path: "/v1/institutions", wantStatus: http.StatusOK},
 		{name: "list accounts", method: http.MethodGet, path: "/v1/accounts?accountType=REVENUE", wantStatus: http.StatusOK},
 		{name: "list accounts bad type", method: http.MethodGet, path: "/v1/accounts?accountType=CRYPTO", wantStatus: http.StatusBadRequest},
+		{name: "list journal entries", method: http.MethodGet, path: "/v1/journal-entries", wantStatus: http.StatusOK},
+		{name: "list balances", method: http.MethodGet, path: "/v1/balances?institutionId=minfin", wantStatus: http.StatusOK},
 		{name: "validate ok", method: http.MethodPost, path: "/v1/transactions/validate", body: validTransactionJSON, wantStatus: http.StatusOK},
 		{name: "validate rejects", method: http.MethodPost, path: "/v1/transactions/validate", body: `{"id":""}`, wantStatus: http.StatusBadRequest},
 		{name: "create ok", method: http.MethodPost, path: "/v1/transactions", body: validTransactionJSON, wantStatus: http.StatusCreated},
@@ -125,6 +146,7 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 				WithTransactionRepository(testCase.repository),
 				WithInstitutionRepository(testCase.repository),
 				WithAccountRepository(testCase.repository),
+				WithJournalRepository(testCase.repository),
 			)
 
 			var body io.Reader

@@ -1,6 +1,8 @@
 import type { RouteObject } from "react-router";
 import { AppShell } from "@/components/app-shell";
 import AccountsPage from "./accounts";
+import BalancesPage from "./balances";
+import JournalPage from "./journal";
 import AuditPage from "./audit";
 import InstitutionsPage from "./institutions";
 import OverviewPage from "./overview";
@@ -16,6 +18,8 @@ export const routes: RouteObject[] = [
       { path: "transactions", element: <TransactionsPage /> },
       { path: "validation", element: <ValidationPage /> },
       { path: "accounts", element: <AccountsPage /> },
+      { path: "journal", element: <JournalPage /> },
+      { path: "balances", element: <BalancesPage /> },
       { path: "institutions", element: <InstitutionsPage /> },
       { path: "audit", element: <AuditPage /> }
     ]

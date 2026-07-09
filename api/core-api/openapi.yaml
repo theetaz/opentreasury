@@ -87,6 +87,102 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/journal-entries:
+    get:
+      operationId: listJournalEntries
+      summary: List posted journal entries
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string, minLength: 1 }
+        - name: fiscalYear
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [POSTED, REVERSED] }
+        - $ref: "#/components/parameters/dateFrom"
+        - $ref: "#/components/parameters/dateTo"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Matching journal entries with their lines.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListJournalEntriesResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503":
+          description: Journal persistence is not available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    post:
+      operationId: postJournalEntry
+      summary: Post a balanced double-entry journal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JournalEntryInput" }
+      responses:
+        "201":
+          description: Entry posted; balances updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreateEntryResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409":
+          description: An entry with the same id already exists.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422":
+          description: The referenced institution does not exist.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503":
+          description: Journal persistence is not available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /v1/balances:
+    get:
+      operationId: listBalances
+      summary: List materialized account balances
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string, minLength: 1 }
+        - name: accountCode
+          in: query
+          required: false
+          schema: { type: string, minLength: 1 }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Balances per institution, account, and currency.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListBalancesResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503":
+          description: Balance persistence is not available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
   /v1/audit-events:
     get:
       operationId: listAuditEvents
@@ -493,6 +589,74 @@ components:
             $ref: "#/components/schemas/Account"
         pagination:
           $ref: "#/components/schemas/Pagination"
+    JournalLine:
+      type: object
+      required: [accountCode, direction, amountMinor, currency]
+      properties:
+        accountCode: { type: string }
+        direction: { type: string, enum: [DEBIT, CREDIT] }
+        amountMinor: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+    JournalEntryInput:
+      type: object
+      required: [id, institutionId, fiscalYear, effectiveDate, description, lines]
+      properties:
+        id: { type: string }
+        institutionId: { type: string }
+        fiscalYear: { type: integer, minimum: 1 }
+        effectiveDate: { type: string, format: date }
+        description: { type: string }
+        idempotencyKey: { type: string }
+        lines:
+          type: array
+          minItems: 2
+          items: { $ref: "#/components/schemas/JournalLine" }
+    JournalEntry:
+      type: object
+      required: [id, institutionId, fiscalYear, effectiveDate, description, status, entryType, lines]
+      properties:
+        id: { type: string }
+        institutionId: { type: string }
+        fiscalYear: { type: integer }
+        effectiveDate: { type: string, format: date }
+        description: { type: string }
+        status: { type: string, enum: [POSTED, REVERSED] }
+        entryType: { type: string, enum: [STANDARD, REVERSAL] }
+        reversesEntryId: { type: string }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/JournalLine" }
+    CreateEntryResponse:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+    ListJournalEntriesResponse:
+      type: object
+      required: [entries, pagination]
+      properties:
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/JournalEntry" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    Balance:
+      type: object
+      required: [institutionId, accountCode, currency, balanceMinor]
+      properties:
+        institutionId: { type: string }
+        accountCode: { type: string }
+        accountName: { type: string }
+        accountType: { type: string }
+        currency: { type: string }
+        balanceMinor: { type: integer, format: int64 }
+    ListBalancesResponse:
+      type: object
+      required: [balances, pagination]
+      properties:
+        balances:
+          type: array
+          items: { $ref: "#/components/schemas/Balance" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
     Pagination:
       type: object
       description: Server-side page window. Table state travels in query parameters.
