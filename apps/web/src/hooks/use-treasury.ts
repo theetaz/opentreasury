@@ -2,15 +2,24 @@ import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   checkCoreApiHealth,
   createTransaction,
+  listAccounts,
   listAuditEvents,
   listInstitutions,
   listTransactions,
   validateTransaction,
+  type AccountListFilter,
   type AuditEventListFilter,
   type InstitutionListFilter,
   type TransactionListFilter,
   type TreasuryTransaction
 } from "@/api";
+
+export function useAccounts(filter: AccountListFilter) {
+  return useQuery({
+    queryKey: ["accounts", filter],
+    queryFn: () => listAccounts(filter)
+  });
+}
 
 export function useHealth() {
   return useQuery({

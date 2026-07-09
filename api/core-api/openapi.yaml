@@ -50,6 +50,43 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ReadinessResponse"
+  /v1/accounts:
+    get:
+      operationId: listAccounts
+      summary: List accounts of the active chart of accounts
+      parameters:
+        - name: accountType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ASSET
+              - LIABILITY
+              - NET_WORTH
+              - REVENUE
+              - EXPENSE
+          description: Filter accounts by classification type.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Accounts of the active chart version in code order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAccountsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Account persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/audit-events:
     get:
       operationId: listAuditEvents
@@ -406,6 +443,49 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Institution"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    Account:
+      type: object
+      required:
+        - code
+        - name
+        - accountType
+        - active
+      properties:
+        code:
+          type: string
+          description: Hierarchical account code within the chart version.
+        name:
+          type: string
+        accountType:
+          type: string
+          enum:
+            - ASSET
+            - LIABILITY
+            - NET_WORTH
+            - REVENUE
+            - EXPENSE
+        parentCode:
+          type: string
+        gfsmCode:
+          type: string
+          description: IMF GFSM 2014 economic classification mapping.
+        cofogCode:
+          type: string
+          description: COFOG functional classification mapping.
+        active:
+          type: boolean
+    ListAccountsResponse:
+      type: object
+      required:
+        - accounts
+        - pagination
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Account"
         pagination:
           $ref: "#/components/schemas/Pagination"
     Pagination:

@@ -116,6 +116,7 @@ func newServer(cfg config, db *sql.DB) *http.Server {
 			options,
 			httpapi.WithTransactionRepository(treasury.NewPostgresTransactionRepository(db)),
 			httpapi.WithInstitutionRepository(treasury.NewPostgresInstitutionRepository(db)),
+			httpapi.WithAccountRepository(treasury.NewPostgresAccountRepository(db)),
 			httpapi.WithReadinessCheck(db.PingContext),
 		)
 	}

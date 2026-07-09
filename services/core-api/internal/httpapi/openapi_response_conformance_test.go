@@ -50,6 +50,16 @@ func (conformanceRepository) ListAuditEvents(context.Context, treasury.ListAudit
 	}}}, nil
 }
 
+func (conformanceRepository) ListAccounts(context.Context, treasury.ListAccountsFilter) (treasury.AccountPage, error) {
+	return treasury.AccountPage{Total: 1, Accounts: []treasury.Account{{
+		Code:        "1",
+		Name:        "Revenue",
+		AccountType: "REVENUE",
+		GfsmCode:    "1",
+		Active:      true,
+	}}}, nil
+}
+
 func (conformanceRepository) ListInstitutions(context.Context, treasury.ListInstitutionsFilter) (treasury.InstitutionPage, error) {
 	return treasury.InstitutionPage{Total: 1, Institutions: []treasury.Institution{{
 		ID:          "minfin",
@@ -94,6 +104,8 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 		{name: "list transactions bad limit", method: http.MethodGet, path: "/v1/transactions?limit=101", wantStatus: http.StatusBadRequest},
 		{name: "list audit events", method: http.MethodGet, path: "/v1/audit-events", wantStatus: http.StatusOK},
 		{name: "list institutions", method: http.MethodGet, path: "/v1/institutions", wantStatus: http.StatusOK},
+		{name: "list accounts", method: http.MethodGet, path: "/v1/accounts?accountType=REVENUE", wantStatus: http.StatusOK},
+		{name: "list accounts bad type", method: http.MethodGet, path: "/v1/accounts?accountType=CRYPTO", wantStatus: http.StatusBadRequest},
 		{name: "validate ok", method: http.MethodPost, path: "/v1/transactions/validate", body: validTransactionJSON, wantStatus: http.StatusOK},
 		{name: "validate rejects", method: http.MethodPost, path: "/v1/transactions/validate", body: `{"id":""}`, wantStatus: http.StatusBadRequest},
 		{name: "create ok", method: http.MethodPost, path: "/v1/transactions", body: validTransactionJSON, wantStatus: http.StatusCreated},
@@ -112,6 +124,7 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 			apiRouter := NewRouter(
 				WithTransactionRepository(testCase.repository),
 				WithInstitutionRepository(testCase.repository),
+				WithAccountRepository(testCase.repository),
 			)
 
 			var body io.Reader

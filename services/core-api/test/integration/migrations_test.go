@@ -89,6 +89,31 @@ func openDB(t *testing.T, dsn string) *sql.DB {
 	return db
 }
 
+// applySeeds executes every database/seeds/*.sql file in order.
+func applySeeds(t *testing.T, db *sql.DB) {
+	t.Helper()
+
+	seedsDir := repoPath(t, "database", "seeds")
+	entries, err := os.ReadDir(seedsDir)
+	require.NoError(t, err)
+
+	var seedFiles []string
+	for _, entry := range entries {
+		if strings.HasSuffix(entry.Name(), ".sql") {
+			seedFiles = append(seedFiles, filepath.Join(seedsDir, entry.Name()))
+		}
+	}
+	sort.Strings(seedFiles)
+	require.NotEmpty(t, seedFiles, "expected seed .sql files in database/seeds")
+
+	for _, seedFile := range seedFiles {
+		contents, err := os.ReadFile(seedFile)
+		require.NoError(t, err)
+		_, err = db.Exec(string(contents))
+		require.NoErrorf(t, err, "seed file %s must apply cleanly", seedFile)
+	}
+}
+
 func TestMigrationsApplyUpAndDownAgainstRealPostgres(t *testing.T) {
 	dsn := startPostgres(t)
 	migrator := newMigrator(t, dsn)
@@ -156,25 +181,7 @@ func TestSeedsLoadAfterMigrations(t *testing.T) {
 
 	require.NoError(t, migrator.Up())
 
-	seedsDir := repoPath(t, "database", "seeds")
-	entries, err := os.ReadDir(seedsDir)
-	require.NoError(t, err)
-
-	var seedFiles []string
-	for _, entry := range entries {
-		if strings.HasSuffix(entry.Name(), ".sql") {
-			seedFiles = append(seedFiles, filepath.Join(seedsDir, entry.Name()))
-		}
-	}
-	sort.Strings(seedFiles)
-	require.NotEmpty(t, seedFiles, "expected seed .sql files in database/seeds")
-
-	for _, seedFile := range seedFiles {
-		contents, err := os.ReadFile(seedFile)
-		require.NoError(t, err)
-		_, err = db.Exec(string(contents))
-		require.NoError(t, err, "seed file %s must apply cleanly", seedFile)
-	}
+	applySeeds(t, db)
 
 	var institutions int
 	require.NoError(t, db.QueryRow("SELECT COUNT(*) FROM treasury_institutions").Scan(&institutions))
@@ -185,10 +192,5 @@ func TestSeedsLoadAfterMigrations(t *testing.T) {
 	require.GreaterOrEqual(t, transactions, 1, "seeds must provide sample transactions")
 
 	// Seeds must be idempotent: re-applying them is a no-op, not an error.
-	for _, seedFile := range seedFiles {
-		contents, err := os.ReadFile(seedFile)
-		require.NoError(t, err)
-		_, err = db.Exec(string(contents))
-		require.NoError(t, err, "re-applying seed file %s must be idempotent", seedFile)
-	}
+	applySeeds(t, db)
 }
