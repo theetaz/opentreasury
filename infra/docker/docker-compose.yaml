@@ -94,6 +94,17 @@ services:
       keycloak:
         condition: service_healthy
 
+  mcp-server:
+    build:
+      context: ../../services/mcp-server
+    container_name: opentreasury-mcp-server
+    environment:
+      OPENTREASURY_PUBLIC_API_URL: http://core-api:8080
+    ports:
+      - "8090:8090"
+    depends_on:
+      - core-api
+
   web:
     build:
       context: ../..

@@ -32,6 +32,7 @@ Keycloak (identity), the core API, and the web app.
 - Dashboard (UAT): **http://localhost:5173**
 - Core API: **http://localhost:8080** (`/healthz`, `/v1/...`)
 - Keycloak: **http://localhost:8085** (admin `admin`/`admin`)
+- MCP server: **http://localhost:8090** (streamable HTTP; tools over the public tier)
 
 `make down` stops the stack; `make db-reset` wipes the data volume and
 re-seeds.
