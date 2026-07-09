@@ -2,18 +2,8 @@
   "name": "@opentreasury/mobile",
   "version": "0.0.0",
   "private": true,
+  "description": "Placeholder workspace. The Expo app is scaffolded in blueprint Phase 6.7; dependencies are intentionally empty until then so the stub carries no supply-chain surface.",
   "scripts": {
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "start": "expo start",
-    "typecheck": "tsc --noEmit"
-  },
-  "dependencies": {
-    "expo": "^52.0.0",
-    "react": "^18.3.1",
-    "react-native": "^0.76.5"
-  },
-  "devDependencies": {
-    "typescript": "^5.7.2"
+    "start": "echo 'The mobile app is not scaffolded yet — see docs/opentreasury-blueprint.md Phase 6.7' && exit 1"
   }
 }
