@@ -424,6 +424,46 @@ paths:
           content:
             application/json:
               schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /v1/entries/{id}/proof:
+    get:
+      operationId: getEntryProof
+      summary: Get the tamper-evidence proof for a journal entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Anchor receipt + Merkle inclusion proof.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntryProof" }
+        "404":
+          description: The entry has not been anchored yet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /public/v1/entries/{id}/proof:
+    get:
+      operationId: getPublicEntryProof
+      summary: Get the tamper-evidence proof for a journal entry (anonymous)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Anchor receipt + Merkle inclusion proof (immutable, cacheable).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntryProof" }
+        "404":
+          description: The entry has not been anchored yet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
   /public/v1/institutions:
     get:
       operationId: publicListInstitutions
@@ -873,6 +913,30 @@ components:
           type: array
           items: { $ref: "#/components/schemas/StagingRecord" }
         pagination: { $ref: "#/components/schemas/Pagination" }
+    ProofStep:
+      type: object
+      required: [hash, left]
+      properties:
+        hash: { type: string }
+        left: { type: boolean, description: Whether the sibling is on the left. }
+    EntryProof:
+      type: object
+      required: [entry, anchor, leafHash, proof]
+      properties:
+        entry: { $ref: "#/components/schemas/PublicJournalEntry" }
+        anchor:
+          type: object
+          required: [id, merkleRoot, backend, backendRef, anchoredAt]
+          properties:
+            id: { type: string }
+            merkleRoot: { type: string }
+            backend: { type: string }
+            backendRef: { type: string }
+            anchoredAt: { type: string }
+        leafHash: { type: string }
+        proof:
+          type: array
+          items: { $ref: "#/components/schemas/ProofStep" }
     Pagination:
       type: object
       description: Server-side page window. Table state travels in query parameters.

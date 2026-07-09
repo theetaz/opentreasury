@@ -7,6 +7,7 @@ import { DateRangeFilter, FilterBar, SelectFilter } from "@/components/data-tabl
 import { useTableUrlState } from "@/components/data-table/use-table-url-state";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
+import { VerifyEntry } from "@/components/verify-entry";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -69,6 +70,11 @@ const columns: ColumnDef<JournalEntry, unknown>[] = [
     accessorKey: "status",
     header: "Status",
     cell: ({ row }) => <StatusBadge status={row.original.status} />
+  },
+  {
+    id: "verify",
+    header: () => <span className="sr-only">Verify</span>,
+    cell: ({ row }) => <VerifyEntry entryId={row.original.id} />
   }
 ];
 

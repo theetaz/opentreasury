@@ -42,6 +42,7 @@ type routerConfig struct {
 	accountRepository     AccountRepository
 	journalRepository     JournalRepository
 	stagingRepository     StagingRepository
+	anchorRepository      AnchorRepository
 	tokenVerifier         auth.TokenVerifier
 	authorizer            Authorizer
 	publication           *authz.Publication
@@ -142,6 +143,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("GET /v1/balances", config.listBalances)
 	mux.HandleFunc("POST /v1/journal-entries", config.postJournalEntry)
 	mux.HandleFunc("GET /v1/journal-entries", config.listJournalEntries)
+	mux.HandleFunc("GET /v1/entries/{id}/proof", config.entryProof)
 	mux.HandleFunc("GET /v1/audit-events", config.listAuditEvents)
 	mux.HandleFunc("GET /v1/institutions", config.listInstitutions)
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)

@@ -200,6 +200,31 @@ export type StagingListResult =
   | { ok: true; records: StagingRecord[]; pagination: PageInfo }
   | { ok: false; error: string };
 
+export type EntryProof = {
+  entry: {
+    id: string;
+    institutionId: string;
+    fiscalYear: number;
+    effectiveDate: string;
+    status: string;
+    entryType: string;
+    lines: JournalLine[];
+  };
+  anchor: {
+    id: string;
+    merkleRoot: string;
+    backend: string;
+    backendRef: string;
+    anchoredAt: string;
+  };
+  leafHash: string;
+  proof: { hash: string; left: boolean }[];
+};
+
+export type EntryProofResult =
+  | { ok: true; proof: EntryProof }
+  | { ok: false; status: number; error: string };
+
 export type HealthCheckResult =
   | { ok: true; responseTimeMs: number; checkedAt: string }
   | { ok: false; error: string; checkedAt: string };
@@ -648,6 +673,46 @@ export async function listStagingRecords(filter: StagingListFilter = {}): Promis
   } catch {
     return { ok: false, error: "Core API is not reachable" };
   }
+}
+
+export async function fetchEntryProof(entryId: string): Promise<EntryProofResult> {
+  if (!apiBaseUrl) {
+    // Demo mode: synthesize a self-consistent single-leaf proof.
+    const entry = simulatedEntries.find((e) => e.id === entryId);
+    if (!entry) return { ok: false, status: 404, error: "entry has no anchor yet" };
+    const leafHash = await demoLeafHash(entry);
+    return {
+      ok: true,
+      proof: {
+        entry: { id: entry.id, institutionId: entry.institutionId, fiscalYear: entry.fiscalYear, effectiveDate: entry.effectiveDate, status: entry.status, entryType: entry.entryType, lines: entry.lines },
+        anchor: { id: "anc-demo", merkleRoot: leafHash, backend: "transparency-log", backendRef: "tlog:1", anchoredAt: "2026-07-10T00:00:00Z" },
+        leafHash,
+        proof: []
+      }
+    };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/entries/${encodeURIComponent(entryId)}/proof`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, status: response.status, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    return { ok: true, proof: (await response.json()) as EntryProof };
+  } catch {
+    return { ok: false, status: 0, error: "Core API is not reachable" };
+  }
+}
+
+async function demoLeafHash(entry: JournalEntry): Promise<string> {
+  const lines = entry.lines
+    .map((l) => `${l.accountCode}:${l.direction}:${l.amountMinor}:${l.currency}`)
+    .sort()
+    .join(";");
+  const canonical = ["v1", entry.id, entry.institutionId, String(entry.fiscalYear), entry.effectiveDate, entry.status, entry.entryType, lines].join("|");
+  const bytes = new TextEncoder().encode(canonical);
+  const digest = await crypto.subtle.digest("SHA-256", bytes);
+  return [...new Uint8Array(digest)].map((b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function validateTransaction(transaction: TreasuryTransaction): Promise<ApiResult> {
