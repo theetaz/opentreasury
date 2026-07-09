@@ -3,8 +3,16 @@ package treasury
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
+
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+const (
+	pgUniqueViolation     = "23505"
+	pgForeignKeyViolation = "23503"
 )
 
 type PostgresTransactionRepository struct {
@@ -39,6 +47,26 @@ func (repository *PostgresTransactionRepository) Save(ctx context.Context, tx Tr
 		tx.Description,
 		tx.TransactionDate,
 	)
+	return mapSaveError(tx.ID, err)
+}
+
+// mapSaveError converts constraint violations into domain errors the HTTP
+// layer can translate into meaningful status codes.
+func mapSaveError(transactionID string, err error) error {
+	if err == nil {
+		return nil
+	}
+
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) {
+		switch pgErr.Code {
+		case pgUniqueViolation:
+			return fmt.Errorf("saving transaction %q: %w", transactionID, ErrDuplicateTransaction)
+		case pgForeignKeyViolation:
+			return fmt.Errorf("saving transaction %q: %w", transactionID, ErrUnknownInstitution)
+		}
+	}
+
 	return err
 }
 
