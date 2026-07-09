@@ -369,6 +369,76 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /public/v1/institutions:
+    get:
+      operationId: publicListInstitutions
+      summary: List institutions (anonymous public tier)
+      description: Anonymous, rate-limited, policy-redacted. Cache-Control public.
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Public institutions.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListInstitutionsResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /public/v1/accounts:
+    get:
+      operationId: publicListAccounts
+      summary: List chart of accounts (anonymous public tier)
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Public chart of accounts.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListAccountsResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /public/v1/balances:
+    get:
+      operationId: publicListBalances
+      summary: List account balances (anonymous public tier)
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Public balances.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListBalancesResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /public/v1/journal-entries:
+    get:
+      operationId: publicListJournalEntries
+      summary: List journal entries (anonymous public tier, redacted)
+      description: >-
+        Policy-redacted projection: entry descriptions and idempotency keys are
+        not published; structure, amounts, accounts, and dates are.
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string }
+        - $ref: "#/components/parameters/dateFrom"
+        - $ref: "#/components/parameters/dateTo"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Public journal entries.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicListJournalEntriesResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
 components:
   parameters:
     page:
@@ -417,6 +487,12 @@ components:
         format: date
       description: Inclusive upper date bound. Must not precede dateFrom.
   responses:
+    RateLimited:
+      description: Per-client rate limit exceeded on the public tier.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
     BadRequest:
       description: Request payload is invalid.
       content:
@@ -656,6 +732,29 @@ components:
         balances:
           type: array
           items: { $ref: "#/components/schemas/Balance" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    PublicJournalEntry:
+      type: object
+      description: Journal entry as published on the anonymous tier (no description).
+      required: [id, institutionId, fiscalYear, effectiveDate, status, entryType, lines]
+      properties:
+        id: { type: string }
+        institutionId: { type: string }
+        fiscalYear: { type: integer }
+        effectiveDate: { type: string, format: date }
+        status: { type: string, enum: [POSTED, REVERSED] }
+        entryType: { type: string, enum: [STANDARD, REVERSAL] }
+        reversesEntryId: { type: string }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/JournalLine" }
+    PublicListJournalEntriesResponse:
+      type: object
+      required: [entries, pagination]
+      properties:
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/PublicJournalEntry" }
         pagination: { $ref: "#/components/schemas/Pagination" }
     Pagination:
       type: object

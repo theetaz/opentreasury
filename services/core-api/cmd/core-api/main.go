@@ -127,6 +127,15 @@ func newServer(ctx context.Context, cfg config, db *sql.DB, logger *slog.Logger)
 			httpapi.WithJournalRepository(treasury.NewPostgresJournalRepository(db)),
 			httpapi.WithReadinessCheck(db.PingContext),
 		)
+
+		// The anonymous public tier is part of the product (transparency);
+		// it serves policy-redacted projections whenever data is available.
+		publication, err := authz.NewPublication(ctx)
+		if err != nil {
+			logger.Error("publication policy failed to compile; public tier disabled", "error", err)
+		} else {
+			options = append(options, httpapi.WithPublication(publication))
+		}
 	}
 
 	// Authentication is enabled only when an OIDC issuer is configured, so
