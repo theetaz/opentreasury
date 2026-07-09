@@ -99,6 +99,7 @@ export type Account = {
   gfsmCode?: string;
   cofogCode?: string;
   active: boolean;
+  depth: number;
 };
 
 export type AccountListFilter = {
@@ -116,16 +117,16 @@ export type HealthCheckResult =
   | { ok: false; error: string; checkedAt: string };
 
 const simulatedAccounts: Account[] = [
-  { code: "1", name: "Revenue", accountType: "REVENUE", gfsmCode: "1", active: true },
-  { code: "11", name: "Taxes", accountType: "REVENUE", parentCode: "1", gfsmCode: "11", active: true },
-  { code: "114", name: "Taxes on goods and services", accountType: "REVENUE", parentCode: "11", gfsmCode: "114", active: true },
-  { code: "2", name: "Expense", accountType: "EXPENSE", gfsmCode: "2", active: true },
-  { code: "21", name: "Compensation of employees", accountType: "EXPENSE", parentCode: "2", gfsmCode: "21", active: true },
-  { code: "22", name: "Use of goods and services", accountType: "EXPENSE", parentCode: "2", gfsmCode: "22", active: true },
-  { code: "62", name: "Financial assets", accountType: "ASSET", gfsmCode: "62", active: true },
-  { code: "6202", name: "Currency and deposits", accountType: "ASSET", parentCode: "62", gfsmCode: "6202", active: true },
-  { code: "63", name: "Liabilities", accountType: "LIABILITY", gfsmCode: "63", active: true },
-  { code: "6", name: "Net worth", accountType: "NET_WORTH", gfsmCode: "6", active: true }
+  { code: "1", name: "Revenue", accountType: "REVENUE", gfsmCode: "1", active: true, depth: 0 },
+  { code: "11", name: "Taxes", accountType: "REVENUE", parentCode: "1", gfsmCode: "11", active: true, depth: 1 },
+  { code: "114", name: "Taxes on goods and services", accountType: "REVENUE", parentCode: "11", gfsmCode: "114", active: true, depth: 2 },
+  { code: "2", name: "Expense", accountType: "EXPENSE", gfsmCode: "2", active: true, depth: 0 },
+  { code: "21", name: "Compensation of employees", accountType: "EXPENSE", parentCode: "2", gfsmCode: "21", active: true, depth: 1 },
+  { code: "22", name: "Use of goods and services", accountType: "EXPENSE", parentCode: "2", gfsmCode: "22", active: true, depth: 1 },
+  { code: "62", name: "Financial assets", accountType: "ASSET", gfsmCode: "62", active: true, depth: 0 },
+  { code: "6202", name: "Currency and deposits", accountType: "ASSET", parentCode: "62", gfsmCode: "6202", active: true, depth: 1 },
+  { code: "63", name: "Liabilities", accountType: "LIABILITY", gfsmCode: "63", active: true, depth: 0 },
+  { code: "6", name: "Net worth", accountType: "NET_WORTH", gfsmCode: "6", active: true, depth: 0 }
 ];
 
 const apiBaseUrl = import.meta.env.VITE_CORE_API_URL;
@@ -427,7 +428,7 @@ type PageWindow = { page: number; pageSize: number };
 function pageWindow(filter: { page?: number; pageSize?: number; limit?: number }): PageWindow {
   return {
     page: filter.page && filter.page > 0 ? filter.page : 1,
-    pageSize: filter.pageSize ?? filter.limit ?? 25
+    pageSize: filter.pageSize ?? filter.limit ?? 15
   };
 }
 

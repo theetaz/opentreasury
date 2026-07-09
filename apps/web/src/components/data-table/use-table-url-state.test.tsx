@@ -10,11 +10,11 @@ function wrapper(initialEntry: string) {
 }
 
 describe("useTableUrlState", () => {
-  it("defaults to page 1 and pageSize 25 when the URL is empty", () => {
+  it("defaults to page 1 and pageSize 15 when the URL is empty", () => {
     const { result } = renderHook(() => useTableUrlState(), { wrapper: wrapper("/transactions") });
 
     expect(result.current.page).toBe(1);
-    expect(result.current.pageSize).toBe(25);
+    expect(result.current.pageSize).toBe(15);
     expect(result.current.filters).toEqual({});
   });
 

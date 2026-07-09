@@ -411,7 +411,7 @@ type institutionResponse struct {
 
 const (
 	maxListLimit    = 100
-	defaultPageSize = 25
+	defaultPageSize = 15
 )
 
 // parseLimit enforces the documented 1..100 range strictly; out-of-range

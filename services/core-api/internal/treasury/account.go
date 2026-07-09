@@ -15,6 +15,9 @@ type Account struct {
 	GfsmCode    string
 	CofogCode   string
 	Active      bool
+	// Depth is the account's distance from a root account (0-based),
+	// computed from the parent chain — presentation layers indent by it.
+	Depth int
 }
 
 var ValidAccountTypes = map[string]struct{}{

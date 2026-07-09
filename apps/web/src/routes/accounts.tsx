@@ -30,16 +30,25 @@ const columns: ColumnDef<Account, unknown>[] = [
   {
     accessorKey: "code",
     header: "Code",
+    cell: ({ row }) => <span className="font-mono text-[13px]">{row.original.code}</span>
+  },
+  {
+    accessorKey: "name",
+    header: "Account",
     cell: ({ row }) => (
       <span
-        className="font-mono text-[13px]"
-        style={{ paddingLeft: `${Math.max(0, row.original.code.length - 1) * 12}px` }}
+        className={cn(row.original.depth === 0 && "font-medium")}
+        style={{ paddingLeft: `${row.original.depth * 20}px` }}
       >
-        {row.original.code}
+        {row.original.depth > 0 ? (
+          <span aria-hidden className="mr-1.5 text-muted-foreground/50">
+            └
+          </span>
+        ) : null}
+        {row.original.name}
       </span>
     )
   },
-  { accessorKey: "name", header: "Account" },
   {
     accessorKey: "accountType",
     header: "Type",

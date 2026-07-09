@@ -81,13 +81,13 @@ describe("transactions data table", () => {
 
   it("paginates server-side through the footer controls", async () => {
     const user = userEvent.setup();
-    renderApp("/transactions?pageSize=10");
+    renderApp("/transactions");
 
     expect(await screen.findByText(/1–3 of 3/)).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Next page" })).toBeDisabled();
 
     await user.click(screen.getByRole("combobox", { name: "Rows per page" }));
-    await user.click(await screen.findByRole("option", { name: "10 / page" }));
+    await user.click(await screen.findByRole("option", { name: "25 / page" }));
   });
 });
 

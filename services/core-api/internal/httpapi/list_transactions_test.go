@@ -63,7 +63,7 @@ func TestListTransactionsEndpointUsesDefaultPageSize(t *testing.T) {
 
 	require.Equal(t, http.StatusOK, response.Code)
 	require.Equal(t, treasury.ListTransactionsFilter{
-		Pagination: treasury.Pagination{Page: 1, PageSize: 25},
+		Pagination: treasury.Pagination{Page: 1, PageSize: 15},
 	}, repository.filter)
 }
 
