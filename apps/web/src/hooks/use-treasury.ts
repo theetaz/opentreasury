@@ -7,6 +7,7 @@ import {
   listTransactions,
   validateTransaction,
   type AuditEventListFilter,
+  type InstitutionListFilter,
   type TransactionListFilter,
   type TreasuryTransaction
 } from "@/api";
@@ -33,10 +34,20 @@ export function useAuditEvents(filter: AuditEventListFilter = {}) {
   });
 }
 
+// Full institution set for dropdown filters and relationship pickers.
 export function useInstitutions() {
   return useQuery({
-    queryKey: ["institutions"],
-    queryFn: () => listInstitutions({})
+    queryKey: ["institutions", "all"],
+    queryFn: () => listInstitutions({ pageSize: 100 }),
+    staleTime: 5 * 60_000
+  });
+}
+
+// Paged institution browsing for the institutions table.
+export function useInstitutionsPage(filter: InstitutionListFilter) {
+  return useQuery({
+    queryKey: ["institutions", filter],
+    queryFn: () => listInstitutions(filter)
   });
 }
 

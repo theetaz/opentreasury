@@ -15,6 +15,18 @@ export function buildInstitutionsPath(filter: InstitutionListFilter = {}): strin
     params.set("limit", String(filter.limit));
   }
 
+  if (filter.status) {
+    params.set("status", filter.status);
+  }
+
+  if (filter.page) {
+    params.set("page", String(filter.page));
+  }
+
+  if (filter.pageSize) {
+    params.set("pageSize", String(filter.pageSize));
+  }
+
   const query = params.toString();
   return query ? `/v1/institutions?${query}` : "/v1/institutions";
 }

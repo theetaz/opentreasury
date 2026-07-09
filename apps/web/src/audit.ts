@@ -16,7 +16,23 @@ export function buildAuditEventsPath(filter: AuditEventListFilter = {}): string 
     params.set("institutionId", filter.institutionId);
   }
 
-  if (filter.limit) {
+  if (filter.dateFrom) {
+    params.set("dateFrom", filter.dateFrom);
+  }
+
+  if (filter.dateTo) {
+    params.set("dateTo", filter.dateTo);
+  }
+
+  if (filter.page) {
+    params.set("page", String(filter.page));
+  }
+
+  if (filter.pageSize) {
+    params.set("pageSize", String(filter.pageSize));
+  }
+
+  if (filter.limit && !filter.pageSize) {
     params.set("limit", String(filter.limit));
   }
 
