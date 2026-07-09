@@ -1,4 +1,4 @@
-import { Building2, LayoutDashboard, ListChecks, ScrollText, ShieldCheck } from "lucide-react";
+import { BookOpenCheck, Building2, LayoutDashboard, ListChecks, ScrollText, ShieldCheck } from "lucide-react";
 import { Link, useLocation } from "react-router";
 import {
   Sidebar,
@@ -15,6 +15,7 @@ const items = [
   { title: "Overview", url: "/", icon: LayoutDashboard },
   { title: "Transactions", url: "/transactions", icon: ListChecks },
   { title: "Validation", url: "/validation", icon: ShieldCheck },
+  { title: "Accounts", url: "/accounts", icon: BookOpenCheck },
   { title: "Institutions", url: "/institutions", icon: Building2 },
   { title: "Audit trail", url: "/audit", icon: ScrollText }
 ];

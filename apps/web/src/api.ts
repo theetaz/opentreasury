@@ -91,9 +91,42 @@ export type InstitutionListResult =
   | { ok: true; institutions: Institution[]; pagination: PageInfo }
   | { ok: false; error: string };
 
+export type Account = {
+  code: string;
+  name: string;
+  accountType: "ASSET" | "LIABILITY" | "NET_WORTH" | "REVENUE" | "EXPENSE";
+  parentCode?: string;
+  gfsmCode?: string;
+  cofogCode?: string;
+  active: boolean;
+};
+
+export type AccountListFilter = {
+  accountType?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type AccountListResult =
+  | { ok: true; accounts: Account[]; pagination: PageInfo }
+  | { ok: false; error: string };
+
 export type HealthCheckResult =
   | { ok: true; responseTimeMs: number; checkedAt: string }
   | { ok: false; error: string; checkedAt: string };
+
+const simulatedAccounts: Account[] = [
+  { code: "1", name: "Revenue", accountType: "REVENUE", gfsmCode: "1", active: true },
+  { code: "11", name: "Taxes", accountType: "REVENUE", parentCode: "1", gfsmCode: "11", active: true },
+  { code: "114", name: "Taxes on goods and services", accountType: "REVENUE", parentCode: "11", gfsmCode: "114", active: true },
+  { code: "2", name: "Expense", accountType: "EXPENSE", gfsmCode: "2", active: true },
+  { code: "21", name: "Compensation of employees", accountType: "EXPENSE", parentCode: "2", gfsmCode: "21", active: true },
+  { code: "22", name: "Use of goods and services", accountType: "EXPENSE", parentCode: "2", gfsmCode: "22", active: true },
+  { code: "62", name: "Financial assets", accountType: "ASSET", gfsmCode: "62", active: true },
+  { code: "6202", name: "Currency and deposits", accountType: "ASSET", parentCode: "62", gfsmCode: "6202", active: true },
+  { code: "63", name: "Liabilities", accountType: "LIABILITY", gfsmCode: "63", active: true },
+  { code: "6", name: "Net worth", accountType: "NET_WORTH", gfsmCode: "6", active: true }
+];
 
 const apiBaseUrl = import.meta.env.VITE_CORE_API_URL;
 
@@ -283,6 +316,56 @@ export async function listInstitutions(filter: InstitutionListFilter = { limit: 
       ok: true,
       institutions: body.institutions ?? [],
       pagination: body.pagination ?? fallbackPageInfo(filter, body.institutions?.length ?? 0)
+    };
+  } catch {
+    return { ok: false, error: "Core API is not reachable" };
+  }
+}
+
+export function buildAccountsPath(filter: AccountListFilter = {}): string {
+  const params = new URLSearchParams();
+
+  if (filter.accountType) {
+    params.set("accountType", filter.accountType);
+  }
+
+  if (filter.page) {
+    params.set("page", String(filter.page));
+  }
+
+  if (filter.pageSize) {
+    params.set("pageSize", String(filter.pageSize));
+  }
+
+  const query = params.toString();
+  return query ? `/v1/accounts?${query}` : "/v1/accounts";
+}
+
+export async function listAccounts(filter: AccountListFilter = {}): Promise<AccountListResult> {
+  if (!apiBaseUrl) {
+    const matches = simulatedAccounts.filter(
+      (account) => !filter.accountType || account.accountType === filter.accountType
+    );
+    const { rows, pagination } = paginate(matches, pageWindow(filter));
+    return { ok: true, accounts: rows, pagination };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${buildAccountsPath(filter)}`);
+
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return {
+        ok: false,
+        error: body?.error ?? `Request failed with status ${response.status}`
+      };
+    }
+
+    const body = (await response.json()) as { accounts?: Account[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      accounts: body.accounts ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.accounts?.length ?? 0)
     };
   } catch {
     return { ok: false, error: "Core API is not reachable" };

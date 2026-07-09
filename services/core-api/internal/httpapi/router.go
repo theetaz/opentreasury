@@ -36,6 +36,7 @@ type routerConfig struct {
 	transactionRepository TransactionRepository
 	auditEventRepository  AuditEventRepository
 	institutionRepository InstitutionRepository
+	accountRepository     AccountRepository
 	allowedOrigins        map[string]struct{}
 	logger                *slog.Logger
 	readinessChecks       []func(context.Context) error
@@ -109,6 +110,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /healthz", health)
 	mux.HandleFunc("GET /readyz", config.readiness)
+	mux.HandleFunc("GET /v1/accounts", config.listAccounts)
 	mux.HandleFunc("GET /v1/audit-events", config.listAuditEvents)
 	mux.HandleFunc("GET /v1/institutions", config.listInstitutions)
 	mux.HandleFunc("GET /v1/transactions", config.listTransactions)

@@ -46,6 +46,16 @@ describe("app shell", () => {
   });
 });
 
+describe("chart of accounts", () => {
+  it("renders the reference accounts and filters by type from the URL", async () => {
+    renderApp("/accounts?accountType=LIABILITY");
+
+    expect(await screen.findByRole("heading", { name: /chart of accounts/i })).toBeInTheDocument();
+    expect(await screen.findByText("Liabilities")).toBeInTheDocument();
+    expect(screen.queryByText("Compensation of employees")).not.toBeInTheDocument();
+  });
+});
+
 describe("transactions data table", () => {
   it("reads table state from the URL and renders the matching server page", async () => {
     renderApp("/transactions?institutionId=minfin&pageSize=10");
