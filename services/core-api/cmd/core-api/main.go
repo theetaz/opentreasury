@@ -13,6 +13,8 @@ import (
 	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/opentreasury/opentreasury/services/core-api/internal/auth"
+	"github.com/opentreasury/opentreasury/services/core-api/internal/authz"
 	"github.com/opentreasury/opentreasury/services/core-api/internal/httpapi"
 	"github.com/opentreasury/opentreasury/services/core-api/internal/treasury"
 )
@@ -21,6 +23,8 @@ type config struct {
 	addr           string
 	databaseDSN    string
 	allowedOrigins []string
+	oidcIssuerURL  string
+	oidcAudience   string
 }
 
 const (
@@ -73,7 +77,7 @@ func run(ctx context.Context, cfg config, logger *slog.Logger) error {
 		cancel()
 	}
 
-	srv := newServer(cfg, db)
+	srv := newServer(ctx, cfg, db, logger)
 
 	listenErr := make(chan error, 1)
 	go func() {
@@ -104,12 +108,15 @@ func loadConfig() config {
 		addr:           addr,
 		databaseDSN:    os.Getenv("OPENTREASURY_DATABASE_DSN"),
 		allowedOrigins: splitCSV(os.Getenv("OPENTREASURY_ALLOWED_ORIGINS")),
+		oidcIssuerURL:  os.Getenv("OPENTREASURY_OIDC_ISSUER_URL"),
+		oidcAudience:   os.Getenv("OPENTREASURY_OIDC_AUDIENCE"),
 	}
 }
 
-func newServer(cfg config, db *sql.DB) *http.Server {
+func newServer(ctx context.Context, cfg config, db *sql.DB, logger *slog.Logger) *http.Server {
 	options := []httpapi.RouterOption{
 		httpapi.WithAllowedOrigins(cfg.allowedOrigins),
+		httpapi.WithLogger(logger),
 	}
 	if db != nil {
 		options = append(
@@ -120,6 +127,27 @@ func newServer(cfg config, db *sql.DB) *http.Server {
 			httpapi.WithJournalRepository(treasury.NewPostgresJournalRepository(db)),
 			httpapi.WithReadinessCheck(db.PingContext),
 		)
+	}
+
+	// Authentication is enabled only when an OIDC issuer is configured, so
+	// local-dev boots without Keycloak. Discovery is retried lazily by the
+	// verifier's JWKS refresh, but the initial provider fetch happens here.
+	if cfg.oidcIssuerURL != "" {
+		verifier, err := auth.NewOIDCVerifier(ctx, cfg.oidcIssuerURL, cfg.oidcAudience)
+		if err != nil {
+			logger.Error("oidc verifier unavailable; authentication disabled", "error", err)
+		} else {
+			authorizer, err := authz.New(ctx, logger)
+			if err != nil {
+				logger.Error("authorization policy failed to compile; authentication disabled", "error", err)
+			} else {
+				options = append(options,
+					httpapi.WithTokenVerifier(verifier),
+					httpapi.WithAuthorizer(authorizer),
+				)
+				logger.Info("authentication and authorization enabled", "issuer", cfg.oidcIssuerURL)
+			}
+		}
 	}
 
 	return &http.Server{

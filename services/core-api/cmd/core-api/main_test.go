@@ -1,7 +1,9 @@
 package main
 
 import (
+	"context"
 	"database/sql"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"regexp"
@@ -13,7 +15,7 @@ import (
 )
 
 func TestNewServerUsesConfiguredAddressAndRouter(t *testing.T) {
-	server := newServer(config{addr: "127.0.0.1:9090"}, nil)
+	server := newServer(context.Background(), config{addr: "127.0.0.1:9090"}, nil, slog.New(slog.DiscardHandler))
 
 	if server.Addr != "127.0.0.1:9090" {
 		t.Fatalf("server.Addr = %q, want %q", server.Addr, "127.0.0.1:9090")
@@ -31,7 +33,7 @@ func TestNewServerUsesConfiguredAddressAndRouter(t *testing.T) {
 
 func TestNewServerUsesDatabaseBackedTransactionRepository(t *testing.T) {
 	db, mock := newMockDB(t)
-	server := newServer(config{addr: "127.0.0.1:9090"}, db)
+	server := newServer(context.Background(), config{addr: "127.0.0.1:9090"}, db, slog.New(slog.DiscardHandler))
 	request := httptest.NewRequest(http.MethodPost, "/v1/transactions", strings.NewReader(`{
 		"id": "txn-2026-0001",
 		"institutionId": "minfin",
@@ -69,7 +71,7 @@ func TestNewServerUsesDatabaseBackedTransactionRepository(t *testing.T) {
 
 func TestNewServerUsesDatabaseBackedInstitutionRepository(t *testing.T) {
 	db, mock := newMockDB(t)
-	server := newServer(config{addr: "127.0.0.1:9090"}, db)
+	server := newServer(context.Background(), config{addr: "127.0.0.1:9090"}, db, slog.New(slog.DiscardHandler))
 	request := httptest.NewRequest(http.MethodGet, "/v1/institutions?limit=25", nil)
 	response := httptest.NewRecorder()
 

@@ -54,6 +54,27 @@ services:
         condition: service_completed_successfully
     restart: "no"
 
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.4
+    container_name: opentreasury-keycloak
+    command: ["start-dev", "--import-realm", "--http-port=8080"]
+    environment:
+      KC_BOOTSTRAP_ADMIN_USERNAME: admin
+      KC_BOOTSTRAP_ADMIN_PASSWORD: admin
+      KC_HTTP_ENABLED: "true"
+      KC_HOSTNAME_STRICT: "false"
+      # Tokens are minted with this issuer (what the browser uses).
+      KC_HOSTNAME: http://localhost:8085
+    volumes:
+      - ../keycloak:/opt/keycloak/data/import:ro
+    ports:
+      - "8085:8080"
+    healthcheck:
+      test: ["CMD-SHELL", "exec 3<>/dev/tcp/localhost/8080 && echo ready >&3"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
   core-api:
     build:
       context: ../../services/core-api
@@ -61,11 +82,17 @@ services:
     environment:
       OPENTREASURY_DATABASE_DSN: postgres://opentreasury:opentreasury@postgres:5432/opentreasury_dev?sslmode=disable
       OPENTREASURY_ALLOWED_ORIGINS: http://localhost:5173
+      # Token issuer (external URL) and internal discovery URL for the API.
+      OPENTREASURY_OIDC_ISSUER_URL: http://localhost:8085/realms/opentreasury
+      OPENTREASURY_OIDC_DISCOVERY_URL: http://keycloak:8080/realms/opentreasury
+      OPENTREASURY_OIDC_AUDIENCE: opentreasury-web
     ports:
       - "8080:8080"
     depends_on:
       seed:
         condition: service_completed_successfully
+      keycloak:
+        condition: service_healthy
 
   web:
     build:
@@ -74,6 +101,8 @@ services:
       args:
         # URL of the core API as reached from the user's browser.
         VITE_CORE_API_URL: http://localhost:8080
+        VITE_OIDC_AUTHORITY: http://localhost:8085/realms/opentreasury
+        VITE_OIDC_CLIENT_ID: opentreasury-web
     container_name: opentreasury-web
     ports:
       - "5173:80"

@@ -1,0 +1,125 @@
+{
+  "realm": "opentreasury",
+  "enabled": true,
+  "sslRequired": "none",
+  "registrationAllowed": false,
+  "roles": {
+    "realm": [
+      {
+        "name": "treasury-admin",
+        "description": "Whole-of-government treasury access"
+      },
+      {
+        "name": "institution-user",
+        "description": "Single-institution access"
+      },
+      {
+        "name": "auditor",
+        "description": "Read-only cross-institution audit access"
+      }
+    ]
+  },
+  "clients": [
+    {
+      "clientId": "opentreasury-web",
+      "name": "OpenTreasury Web",
+      "enabled": true,
+      "publicClient": true,
+      "standardFlowEnabled": true,
+      "directAccessGrantsEnabled": true,
+      "redirectUris": [
+        "http://localhost:5173/*"
+      ],
+      "webOrigins": [
+        "http://localhost:5173"
+      ],
+      "attributes": {
+        "post.logout.redirect.uris": "http://localhost:5173/*"
+      },
+      "protocolMappers": [
+        {
+          "name": "institution_id",
+          "protocol": "openid-connect",
+          "protocolMapper": "oidc-usermodel-attribute-mapper",
+          "config": {
+            "user.attribute": "institution_id",
+            "claim.name": "institution_id",
+            "jsonType.label": "String",
+            "id.token.claim": "true",
+            "access.token.claim": "true",
+            "userinfo.token.claim": "true"
+          }
+        }
+      ]
+    }
+  ],
+  "users": [
+    {
+      "username": "treasury-admin",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Treasury",
+      "lastName": "Admin",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "treasury",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "treasury-admin"
+      ],
+      "requiredActions": [],
+      "totp": false,
+      "email": "treasury-admin@opentreasury.local"
+    },
+    {
+      "username": "institution-user",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Institution",
+      "lastName": "User",
+      "attributes": {
+        "institution_id": [
+          "minfin"
+        ]
+      },
+      "credentials": [
+        {
+          "type": "password",
+          "value": "institution",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "institution-user"
+      ],
+      "requiredActions": [],
+      "totp": false,
+      "email": "institution-user@opentreasury.local"
+    },
+    {
+      "username": "auditor",
+      "enabled": true,
+      "emailVerified": true,
+      "firstName": "Public",
+      "lastName": "Auditor",
+      "credentials": [
+        {
+          "type": "password",
+          "value": "auditor",
+          "temporary": false
+        }
+      ],
+      "realmRoles": [
+        "auditor"
+      ],
+      "requiredActions": [],
+      "totp": false,
+      "email": "auditor@opentreasury.local"
+    }
+  ],
+  "verifyEmail": false,
+  "resetPasswordAllowed": false
+}
