@@ -1,0 +1,15 @@
+# Mapping profile: ITMIS-style payment exports → OpenTreasury interchange.
+# Profiles are versioned artifacts; bump `version` on any mapping change so
+# redelivered rows hash differently only when their meaning changed.
+source_system: itmis
+version: 1
+columns:
+  source_ref: reference
+  occurred_at: payment_date
+  institution: institution_code
+  amount: amount
+  currency: currency
+# v1 account resolution: payments post as goods-and-services expense (22)
+# funded from currency and deposits (6202) in the reference chart.
+debit_account: "22"
+credit_account: "6202"

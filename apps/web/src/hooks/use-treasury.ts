@@ -7,6 +7,7 @@ import {
   listBalances,
   listInstitutions,
   listJournalEntries,
+  listStagingRecords,
   listTransactions,
   postJournalEntry,
   validateTransaction,
@@ -16,6 +17,7 @@ import {
   type InstitutionListFilter,
   type JournalEntryInput,
   type JournalEntryListFilter,
+  type StagingListFilter,
   type TransactionListFilter,
   type TreasuryTransaction
 } from "@/api";
@@ -38,6 +40,13 @@ export function useBalances(filter: BalanceListFilter) {
   return useQuery({
     queryKey: ["balances", filter],
     queryFn: () => listBalances(filter)
+  });
+}
+
+export function useStagingRecords(filter: StagingListFilter) {
+  return useQuery({
+    queryKey: ["staging-records", filter],
+    queryFn: () => listStagingRecords(filter)
   });
 }
 

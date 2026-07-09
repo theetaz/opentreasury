@@ -2,6 +2,7 @@ import type { RouteObject } from "react-router";
 import { AppShell } from "@/components/app-shell";
 import AccountsPage from "./accounts";
 import BalancesPage from "./balances";
+import IngestionPage from "./ingestion";
 import JournalPage from "./journal";
 import NotFoundPage from "./not-found";
 import AuditPage from "./audit";
@@ -21,6 +22,7 @@ export const routes: RouteObject[] = [
       { path: "accounts", element: <AccountsPage /> },
       { path: "journal", element: <JournalPage /> },
       { path: "balances", element: <BalancesPage /> },
+      { path: "ingestion", element: <IngestionPage /> },
       { path: "institutions", element: <InstitutionsPage /> },
       { path: "audit", element: <AuditPage /> },
       { path: "*", element: <NotFoundPage /> }

@@ -369,6 +369,61 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/staging-records:
+    get:
+      operationId: listStagingRecords
+      summary: List ingested staging records
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [POSTED, QUARANTINED] }
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: sourceSystem
+          in: query
+          required: false
+          schema: { type: string }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Ingested records with per-record status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListStagingRecordsResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "503":
+          description: Staging persistence is not available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    post:
+      operationId: submitStagingRecords
+      summary: Submit a batch of interchange records (connector on-ramp)
+      description: >-
+        At-least-once ingestion. Each record is deduplicated by sourceHash,
+        then posted to the journal or quarantined with a reason. Requires the
+        connector role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StagingBatchInput" }
+      responses:
+        "200":
+          description: Per-record outcomes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StagingOutcomesResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403":
+          description: Not authorized to submit for the target institution.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
   /public/v1/institutions:
     get:
       operationId: publicListInstitutions
@@ -755,6 +810,68 @@ components:
         entries:
           type: array
           items: { $ref: "#/components/schemas/PublicJournalEntry" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    StagingRecordInput:
+      type: object
+      required: [sourceSystem, sourceRef, sourceHash, institutionId, occurredAt, lines]
+      properties:
+        sourceSystem: { type: string }
+        sourceRef: { type: string }
+        sourceHash: { type: string, description: End-to-end idempotency key. }
+        profile: { type: string }
+        institutionId: { type: string }
+        occurredAt: { type: string, format: date }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/JournalLine" }
+    StagingBatchInput:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          maxItems: 500
+          items: { $ref: "#/components/schemas/StagingRecordInput" }
+    StagingOutcome:
+      type: object
+      required: [sourceRef, sourceHash, status]
+      properties:
+        sourceRef: { type: string }
+        sourceHash: { type: string }
+        status: { type: string, enum: [POSTED, QUARANTINED, DUPLICATE] }
+        reason: { type: string }
+        entryId: { type: string }
+    StagingOutcomesResponse:
+      type: object
+      required: [outcomes]
+      properties:
+        outcomes:
+          type: array
+          items: { $ref: "#/components/schemas/StagingOutcome" }
+    StagingRecord:
+      type: object
+      required: [id, sourceSystem, sourceRef, institutionId, occurredAt, status, createdAt, lines]
+      properties:
+        id: { type: string }
+        sourceSystem: { type: string }
+        sourceRef: { type: string }
+        profile: { type: string }
+        institutionId: { type: string }
+        occurredAt: { type: string, format: date }
+        status: { type: string, enum: [POSTED, QUARANTINED] }
+        reason: { type: string }
+        entryId: { type: string }
+        createdAt: { type: string }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/JournalLine" }
+    ListStagingRecordsResponse:
+      type: object
+      required: [records, pagination]
+      properties:
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/StagingRecord" }
         pagination: { $ref: "#/components/schemas/Pagination" }
     Pagination:
       type: object

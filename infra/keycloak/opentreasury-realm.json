@@ -16,6 +16,10 @@
       {
         "name": "auditor",
         "description": "Read-only cross-institution audit access"
+      },
+      {
+        "name": "connector",
+        "description": "Ingestion connector service account"
       }
     ]
   },
@@ -51,6 +55,17 @@
           }
         }
       ]
+    },
+    {
+      "clientId": "opentreasury-connector",
+      "name": "OpenTreasury Connector",
+      "enabled": true,
+      "publicClient": false,
+      "secret": "connector-secret",
+      "standardFlowEnabled": false,
+      "directAccessGrantsEnabled": false,
+      "serviceAccountsEnabled": true,
+      "attributes": {}
     }
   ],
   "users": [
@@ -118,8 +133,17 @@
       "requiredActions": [],
       "totp": false,
       "email": "auditor@opentreasury.local"
+    },
+    {
+      "username": "service-account-opentreasury-connector",
+      "enabled": true,
+      "serviceAccountClientId": "opentreasury-connector",
+      "realmRoles": [
+        "connector"
+      ]
     }
   ],
   "verifyEmail": false,
-  "resetPasswordAllowed": false
+  "resetPasswordAllowed": false,
+  "clientScopeMappings": {}
 }
