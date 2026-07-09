@@ -62,9 +62,15 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   handleCallback: async () => {
     if (!userManager) return;
-    const user = await userManager.signinRedirectCallback();
-    set({ user: toAuthUser(user), ready: true });
-    window.history.replaceState({}, document.title, "/");
+    try {
+      const user = await userManager.signinRedirectCallback();
+      set({ user: toAuthUser(user), ready: true });
+    } finally {
+      // Full navigation (not history.replaceState): the router must
+      // re-initialize at "/" — replaceState is invisible to it and leaves the
+      // app rendering the unrouted /auth/callback path.
+      window.location.replace("/");
+    }
   },
   loadUser: async () => {
     if (!userManager) {

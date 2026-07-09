@@ -46,6 +46,15 @@ describe("app shell", () => {
   });
 });
 
+describe("unknown routes", () => {
+  it("renders the designed not-found page instead of a router error", async () => {
+    renderApp("/auth/callback");
+
+    expect(await screen.findByRole("heading", { name: /page not found/i })).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: /back to overview/i })).toBeInTheDocument();
+  });
+});
+
 describe("journal and balances", () => {
   it("lists journal entries with their line counts", async () => {
     renderApp("/journal");
