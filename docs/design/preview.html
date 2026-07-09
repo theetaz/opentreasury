@@ -1,0 +1,352 @@
+<!-- OpenTreasury design-language preview. Self-contained: tokens are embedded
+     (canonical source: tokens.css). Open in a browser; toggle themes top-right. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>OpenTreasury Design Language</title>
+<style>
+  :root {
+    --background:#f7f7f8; --surface:#ffffff; --surface-raised:#ffffff; --surface-sunken:#f0f0f2;
+    --foreground:#0b0b0e; --muted-foreground:#52525b; --faint-foreground:#8b8b94;
+    --border:rgba(9,9,11,.08); --border-strong:rgba(9,9,11,.16); --ring:#0d9488;
+    --primary:#0d9488; --primary-foreground:#ffffff; --primary-tint:rgba(13,148,136,.10);
+    --success:#15803d; --success-tint:rgba(21,128,61,.12);
+    --warning:#b45309; --warning-tint:rgba(180,83,9,.12);
+    --danger:#b91c1c; --danger-tint:rgba(185,28,28,.10);
+    --info:#1d4ed8; --info-tint:rgba(29,78,216,.10);
+    --chart-1:#0d9488; --chart-2:#2a78d6; --chart-3:#eda100; --chart-4:#4a3aa7;
+    --chart-5:#008300; --chart-6:#e87ba4; --chart-7:#eb6834;
+    --chart-grid:#e7e7ea; --chart-axis:#c6c6cc; --delta-up:#15803d; --delta-down:#b91c1c;
+    --font-sans:"Inter",ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;
+    --font-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+    --radius-card:12px; --radius-control:8px;
+    --shadow-card:0 1px 2px rgba(9,9,11,.05); --shadow-raised:0 4px 16px rgba(9,9,11,.10);
+  }
+  .dark {
+    --background:#0a0a0c; --surface:#131316; --surface-raised:#1a1a1f; --surface-sunken:#0e0e11;
+    --foreground:#f4f4f5; --muted-foreground:#a1a1aa; --faint-foreground:#6e6e78;
+    --border:rgba(255,255,255,.08); --border-strong:rgba(255,255,255,.16); --ring:#14b8a6;
+    --primary:#14b8a6; --primary-foreground:#06211d; --primary-tint:rgba(20,184,166,.12);
+    --success:#34c759; --success-tint:rgba(52,199,89,.14);
+    --warning:#f0a820; --warning-tint:rgba(240,168,32,.14);
+    --danger:#f2555a; --danger-tint:rgba(242,85,90,.12);
+    --info:#5390f5; --info-tint:rgba(83,144,245,.12);
+    --chart-1:#0da895; --chart-2:#3987e5; --chart-3:#c98500; --chart-4:#9085e9;
+    --chart-5:#279f43; --chart-6:#d55181; --chart-7:#d95926;
+    --chart-grid:#26262b; --chart-axis:#3a3a41; --delta-up:#34c759; --delta-down:#f2555a;
+    --shadow-card:0 1px 2px rgba(0,0,0,.4); --shadow-raised:0 4px 20px rgba(0,0,0,.5);
+  }
+  * { box-sizing:border-box; margin:0; }
+  html { color-scheme: light; } html.dark { color-scheme: dark; }
+  body {
+    font-family:var(--font-sans); font-size:14px; line-height:1.5;
+    background:var(--background); color:var(--foreground);
+    transition:background .25s ease-out, color .25s ease-out;
+  }
+  .page { max-width:1200px; margin:0 auto; padding:32px 24px 80px; }
+  .tabular { font-variant-numeric:tabular-nums; }
+  .mono { font-family:var(--font-mono); font-size:13px; }
+  h1 { font-size:24px; font-weight:600; letter-spacing:-.01em; }
+  .eyebrow { font-size:11px; font-weight:600; letter-spacing:.08em; color:var(--faint-foreground); text-transform:uppercase; margin:40px 0 12px; }
+  .subtitle { color:var(--muted-foreground); margin-top:4px; }
+
+  .topline { display:flex; align-items:center; justify-content:space-between; gap:16px; }
+  .brand { display:flex; align-items:center; gap:10px; font-weight:600; font-size:16px; }
+  .brand-mark { width:28px; height:28px; border-radius:8px; background:var(--primary); color:var(--primary-foreground);
+    display:grid; place-items:center; font-size:12px; font-weight:700; }
+
+  .btn { font:inherit; font-weight:500; border-radius:var(--radius-control); padding:7px 14px; cursor:pointer;
+    border:1px solid transparent; transition:filter .15s ease-out, background .15s ease-out; }
+  .btn:focus-visible { outline:2px solid var(--ring); outline-offset:2px; }
+  .btn-primary { background:var(--primary); color:var(--primary-foreground); }
+  .btn-primary:hover { filter:brightness(1.08); }
+  .btn-outline { background:var(--surface); color:var(--foreground); border-color:var(--border-strong); }
+  .btn-outline:hover { background:var(--surface-sunken); }
+  .btn-ghost { background:transparent; color:var(--muted-foreground); }
+  .btn-ghost:hover { background:var(--primary-tint); color:var(--foreground); }
+  .btn-danger { background:var(--danger); color:#fff; }
+
+  .card { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card);
+    box-shadow:var(--shadow-card); padding:20px; }
+  .card-title { font-size:16px; font-weight:600; display:flex; justify-content:space-between; align-items:baseline; }
+  .card-title a { font-size:13px; font-weight:500; color:var(--primary); text-decoration:none; }
+  .timeframe { font-size:13px; color:var(--muted-foreground); margin-top:2px; }
+
+  .badge { display:inline-flex; align-items:center; gap:5px; font-size:12px; font-weight:600;
+    padding:2px 10px; border-radius:999px; }
+  .badge .dot { width:6px; height:6px; border-radius:99px; background:currentColor; }
+  .badge-success { background:var(--success-tint); color:var(--success); }
+  .badge-warning { background:var(--warning-tint); color:var(--warning); }
+  .badge-danger  { background:var(--danger-tint);  color:var(--danger); }
+  .badge-info    { background:var(--info-tint);    color:var(--info); }
+  .badge-neutral { background:var(--surface-sunken); color:var(--muted-foreground); }
+
+  /* ---- app shell mock ---- */
+  .shell { display:grid; grid-template-columns:216px 1fr; border:1px solid var(--border);
+    border-radius:var(--radius-card); overflow:hidden; background:var(--background); box-shadow:var(--shadow-card); }
+  .sidebar { background:var(--surface); border-right:1px solid var(--border); padding:16px 12px; display:flex; flex-direction:column; gap:2px; }
+  .nav-item { display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:8px; font-size:13.5px;
+    font-weight:500; color:var(--muted-foreground); cursor:pointer; }
+  .nav-item:hover { background:var(--surface-sunken); }
+  .nav-item.active { background:var(--primary-tint); color:var(--primary); font-weight:600; }
+  .nav-item svg { width:15px; height:15px; stroke:currentColor; stroke-width:1.7; fill:none; }
+  .nav-section { font-size:10.5px; letter-spacing:.08em; color:var(--faint-foreground); font-weight:600; margin:14px 10px 4px; }
+  .main { display:flex; flex-direction:column; min-width:0; }
+  .topbar { height:52px; display:flex; align-items:center; gap:12px; padding:0 20px;
+    background:var(--surface); border-bottom:1px solid var(--border); }
+  .crumb { font-size:13px; color:var(--muted-foreground); }
+  .crumb b { color:var(--foreground); font-weight:600; }
+  .env { font-size:11px; font-weight:700; letter-spacing:.05em; padding:2px 8px; border-radius:6px;
+    background:var(--info-tint); color:var(--info); }
+  .fresh { margin-left:auto; font-size:12px; color:var(--faint-foreground); display:flex; align-items:center; gap:6px; }
+  .fresh .dot { width:7px; height:7px; border-radius:99px; background:var(--success); }
+  .content { padding:20px; display:grid; gap:14px; }
+  .tiles { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; }
+  .tile { background:var(--surface); border:1px solid var(--border); border-radius:var(--radius-card); padding:14px 16px; }
+  .tile-label { font-size:12.5px; color:var(--muted-foreground); }
+  .tile-value { font-size:26px; font-weight:650; letter-spacing:-.01em; margin-top:2px; }
+  .delta { font-size:12px; font-weight:600; }
+  .delta.up { color:var(--delta-up); } .delta.down { color:var(--delta-down); }
+  .charts { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .legend { display:flex; gap:14px; font-size:12px; color:var(--muted-foreground); margin-top:8px; }
+  .legend i { width:9px; height:9px; border-radius:3px; display:inline-block; margin-right:5px; vertical-align:-1px; }
+
+  table.data { width:100%; border-collapse:collapse; font-size:13px; }
+  table.data th { text-align:left; font-size:12px; font-weight:600; color:var(--muted-foreground);
+    background:var(--surface-sunken); padding:8px 12px; }
+  table.data th.num, table.data td.num { text-align:right; }
+  table.data td { padding:9px 12px; border-top:1px solid var(--border); }
+  table.data tr:hover td { background:var(--primary-tint); }
+
+  .swatches { display:grid; grid-template-columns:repeat(7,1fr); gap:10px; }
+  .swatch { border-radius:10px; border:1px solid var(--border); overflow:hidden; font-size:11px; }
+  .swatch .chip { height:44px; }
+  .swatch .meta { padding:6px 8px; background:var(--surface); color:var(--muted-foreground); }
+  .grid-2 { display:grid; grid-template-columns:1fr 1fr; gap:14px; }
+  .grid-3 { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+  .row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+
+  .field label { display:block; font-size:13px; font-weight:500; margin-bottom:5px; }
+  .field input { font:inherit; width:100%; padding:8px 10px; border-radius:var(--radius-control);
+    border:1px solid var(--border-strong); background:var(--surface); color:var(--foreground); }
+  .field input:focus-visible { outline:2px solid var(--ring); outline-offset:1px; border-color:transparent; }
+  .field .help { font-size:12px; color:var(--faint-foreground); margin-top:4px; }
+  .field.error input { border-color:var(--danger); }
+  .field.error .help { color:var(--danger); }
+
+  .empty { text-align:center; padding:28px 16px; color:var(--muted-foreground); font-size:13.5px; }
+  .empty a { color:var(--primary); font-weight:600; text-decoration:none; }
+
+  .tooltip { position:fixed; pointer-events:none; z-index:10; background:var(--surface-raised);
+    border:1px solid var(--border); border-radius:8px; box-shadow:var(--shadow-raised);
+    padding:8px 10px; font-size:12px; display:none; }
+  .tooltip b { font-variant-numeric:tabular-nums; }
+  .verify { display:inline-flex; align-items:center; gap:6px; font-size:12px; font-weight:600;
+    color:var(--primary); background:var(--primary-tint); padding:3px 10px; border-radius:999px; cursor:pointer; }
+  @media (max-width:900px){ .tiles{grid-template-columns:1fr 1fr} .charts,.grid-2,.grid-3{grid-template-columns:1fr}
+    .shell{grid-template-columns:1fr} .sidebar{display:none} .swatches{grid-template-columns:repeat(4,1fr)} }
+</style>
+
+<div class="page">
+  <div class="topline">
+    <div class="brand"><div class="brand-mark">OT</div> OpenTreasury <span style="color:var(--faint-foreground);font-weight:400">— Design Language v1</span></div>
+    <button class="btn btn-outline" id="themeToggle" aria-label="Toggle color theme">🌙 Dark</button>
+  </div>
+  <p class="subtitle">Canonical tokens: <span class="mono">docs/design/tokens.css</span> · Full guide: <span class="mono">docs/design/design-language.md</span></p>
+
+  <div class="eyebrow">Dashboard template · app shell</div>
+  <div class="shell" aria-label="Sample operator dashboard">
+    <nav class="sidebar">
+      <div class="brand" style="font-size:14px;margin:2px 8px 14px"><div class="brand-mark" style="width:24px;height:24px;font-size:10px">OT</div> OpenTreasury</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="9" rx="1"/><rect x="14" y="3" width="7" height="5" rx="1"/><rect x="14" y="12" width="7" height="9" rx="1"/><rect x="3" y="16" width="7" height="5" rx="1"/></svg> Overview</div>
+      <div class="nav-item active"><svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h12"/></svg> Transactions</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M9 12l2 2 4-5"/><circle cx="12" cy="12" r="9"/></svg> Validation</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 21v-6h6v6"/></svg> Institutions</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 8v5l3 2"/><circle cx="12" cy="12" r="9"/></svg> Audit trail</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><path d="M12 3l8 4v5c0 5-3.5 8-8 9-4.5-1-8-4-8-9V7z"/></svg> Explorer</div>
+      <div class="nav-section">MANAGE</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.2 3.4-5 6.5-5s5.7 1.8 6.5 5M17 8h5M19.5 5.5v5"/></svg> Members</div>
+      <div class="nav-item"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19 12a7 7 0 0 0-.2-1.6l2-1.5-2-3.4-2.3 1a7 7 0 0 0-2.8-1.7L13.4 2h-2.8l-.3 2.8a7 7 0 0 0-2.8 1.7l-2.3-1-2 3.4 2 1.5A7 7 0 0 0 5 12"/></svg> Settings</div>
+    </nav>
+    <div class="main">
+      <div class="topbar">
+        <span class="crumb">Treasury / <b>Transactions</b></span>
+        <span class="env">LOCAL</span>
+        <span class="fresh"><span class="dot"></span> data as of 14:02 · anchored 14:05</span>
+      </div>
+      <div class="content">
+        <div class="tiles">
+          <div class="tile"><div class="tile-label">Cash position</div><div class="tile-value">USD 4.82M</div><span class="delta up">▲ +2.4% vs last week</span></div>
+          <div class="tile"><div class="tile-label">Posted this month</div><div class="tile-value tabular">1,284</div><span class="delta up">▲ +118</span></div>
+          <div class="tile"><div class="tile-label">Quarantined</div><div class="tile-value tabular">7</div><span class="delta down">▼ needs review</span></div>
+          <div class="tile"><div class="tile-label">Anchoring lag</div><div class="tile-value">2.1 min</div><span class="delta up">within SLO</span></div>
+        </div>
+        <div class="charts">
+          <div class="card">
+            <div class="card-title">Cash balance <a href="#">View all</a></div>
+            <div class="timeframe">Last 12 weeks</div>
+            <svg id="lineChart" viewBox="0 0 480 180" width="100%" role="img" aria-label="Cash balance line chart"></svg>
+          </div>
+          <div class="card">
+            <div class="card-title">Flows by classification <a href="#">View all</a></div>
+            <div class="timeframe">Last 6 months</div>
+            <svg id="barChart" viewBox="0 0 480 180" width="100%" role="img" aria-label="Monthly flows grouped bar chart"></svg>
+            <div class="legend"><span><i style="background:var(--chart-1)"></i>Revenue</span><span><i style="background:var(--chart-2)"></i>Expenditure</span></div>
+          </div>
+        </div>
+        <div class="card" style="padding:0">
+          <table class="data">
+            <thead><tr><th>Transaction</th><th>Institution</th><th>Date</th><th class="num">Amount</th><th>Status</th><th></th></tr></thead>
+            <tbody>
+              <tr><td class="mono">txn-2026-0001</td><td>Ministry of Finance</td><td class="tabular">2026-06-28</td><td class="num tabular">USD 1,250.00</td><td><span class="badge badge-success"><span class="dot"></span>POSTED</span></td><td><span class="verify">🛡 Anchored</span></td></tr>
+              <tr><td class="mono">txn-2026-0000</td><td>Transport Infrastructure Agency</td><td class="tabular">2026-06-27</td><td class="num tabular">USD 980.00</td><td><span class="badge badge-warning"><span class="dot"></span>PENDING</span></td><td><span class="verify" style="background:var(--warning-tint);color:var(--warning)">🛡 Awaiting anchor</span></td></tr>
+              <tr><td class="mono">txn-2025-0942</td><td>Ministry of Health</td><td class="tabular">2025-12-18</td><td class="num tabular">USD 4,500.00</td><td><span class="badge badge-danger"><span class="dot"></span>QUARANTINED</span></td><td><span class="btn btn-ghost" style="padding:2px 8px;font-size:12px">Review</span></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="eyebrow">Chart palette · fixed categorical order (validated light & dark)</div>
+  <div class="swatches">
+    <div class="swatch"><div class="chip" style="background:var(--chart-1)"></div><div class="meta">1 · teal (brand)</div></div>
+    <div class="swatch"><div class="chip" style="background:var(--chart-2)"></div><div class="meta">2 · blue</div></div>
+    <div class="swatch"><div class="chip" style="background:var(--chart-3)"></div><div class="meta">3 · amber*</div></div>
+    <div class="swatch"><div class="chip" style="background:var(--chart-4)"></div><div class="meta">4 · violet</div></div>
+    <div class="swatch"><div class="chip" style="background:var(--chart-5)"></div><div class="meta">5 · green</div></div>
+    <div class="swatch"><div class="chip" style="background:var(--chart-6)"></div><div class="meta">6 · magenta*</div></div>
+    <div class="swatch"><div class="chip" style="background:var(--chart-7)"></div><div class="meta">7 · orange</div></div>
+  </div>
+  <p style="font-size:12px;color:var(--faint-foreground);margin-top:6px">* sub-3:1 contrast on light surfaces — charts using these slots ship direct labels or a table view (relief rule).</p>
+
+  <div class="eyebrow">Status system · reserved colors, never chart series</div>
+  <div class="row">
+    <span class="badge badge-success"><span class="dot"></span>ACTIVE</span>
+    <span class="badge badge-success"><span class="dot"></span>POSTED</span>
+    <span class="badge badge-info"><span class="dot"></span>VALIDATED</span>
+    <span class="badge badge-warning"><span class="dot"></span>PENDING ANCHOR</span>
+    <span class="badge badge-danger"><span class="dot"></span>QUARANTINED</span>
+    <span class="badge badge-neutral"><span class="dot"></span>REVERSED</span>
+    <span class="verify">🛡 Anchored · block 48,201</span>
+  </div>
+
+  <div class="eyebrow">Buttons & controls</div>
+  <div class="row">
+    <button class="btn btn-primary">Validate transaction</button>
+    <button class="btn btn-outline">Export CSV</button>
+    <button class="btn btn-ghost">Refresh</button>
+    <button class="btn btn-danger">Reverse entry</button>
+  </div>
+
+  <div class="eyebrow">Typography & financial figures</div>
+  <div class="grid-2">
+    <div class="card">
+      <div style="font-size:24px;font-weight:600">Page title 24/600</div>
+      <div style="font-size:16px;font-weight:600;margin-top:8px">Card title 16/600</div>
+      <div style="margin-top:8px">Body text 14/400 — clarity over decoration, Inter everywhere.</div>
+      <div style="font-size:13px;color:var(--muted-foreground);margin-top:8px">Secondary 13/400 for supporting copy.</div>
+      <div class="mono" style="margin-top:8px">mono 13 — sha256:9f2ab8…c41e · txn-2026-0001</div>
+    </div>
+    <div class="card">
+      <div class="tile-label">Amounts align or they lie (tabular-nums)</div>
+      <table class="data" style="margin-top:8px"><tbody>
+        <tr><td>Road maintenance</td><td class="num tabular">USD 1,250.00</td></tr>
+        <tr><td>Bridge inspection</td><td class="num tabular">USD 980.00</td></tr>
+        <tr><td>Clinic equipment</td><td class="num tabular">USD 14,500.00</td></tr>
+      </tbody></table>
+    </div>
+  </div>
+
+  <div class="eyebrow">Forms & empty states</div>
+  <div class="grid-3">
+    <div class="card">
+      <div class="field"><label>Institution ID</label><input class="mono" value="minfin"><div class="help">Lowercase identifier from the institutions registry.</div></div>
+    </div>
+    <div class="card">
+      <div class="field error"><label>Amount (minor units)</label><input class="mono" value="-1200"><div class="help">Amount must be a positive integer of minor units.</div></div>
+    </div>
+    <div class="card"><div class="empty">No quarantined records in the last 30 days.<br>Adjust the timeframe or <a href="#">review ingestion runs</a>.</div></div>
+  </div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+  const root = document.documentElement;
+  const toggle = document.getElementById("themeToggle");
+  function setTheme(dark) {
+    root.classList.toggle("dark", dark);
+    toggle.textContent = dark ? "☀️ Light" : "🌙 Dark";
+    drawCharts();
+  }
+  toggle.addEventListener("click", () => setTheme(!root.classList.contains("dark")));
+
+  const css = (name) => getComputedStyle(root).getPropertyValue(name).trim();
+  const tooltip = document.getElementById("tooltip");
+  function showTip(evt, html) {
+    tooltip.innerHTML = html; tooltip.style.display = "block";
+    tooltip.style.left = evt.clientX + 14 + "px"; tooltip.style.top = evt.clientY + 14 + "px";
+  }
+  function hideTip() { tooltip.style.display = "none"; }
+
+  const balance = [3.9, 4.1, 4.0, 4.3, 4.2, 4.5, 4.4, 4.6, 4.5, 4.7, 4.75, 4.82];
+  const flows = { labels: ["Jan","Feb","Mar","Apr","May","Jun"],
+    revenue: [310, 285, 330, 300, 345, 360], expenditure: [280, 295, 310, 305, 320, 315] };
+
+  function drawCharts() {
+    const grid = css("--chart-grid"), axis = css("--chart-axis"), faint = css("--faint-foreground");
+    const c1 = css("--chart-1"), c2 = css("--chart-2");
+
+    // Line chart: cash balance
+    const L = document.getElementById("lineChart"); L.innerHTML = "";
+    const lw = 480, lh = 180, lp = { t: 12, r: 10, b: 24, l: 44 };
+    const min = 3.6, max = 5.0;
+    const lx = i => lp.l + (i * (lw - lp.l - lp.r)) / (balance.length - 1);
+    const ly = v => lp.t + (1 - (v - min) / (max - min)) * (lh - lp.t - lp.b);
+    let g = "";
+    [3.8, 4.2, 4.6, 5.0].forEach(v => {
+      g += `<line x1="${lp.l}" y1="${ly(v)}" x2="${lw - lp.r}" y2="${ly(v)}" stroke="${grid}" stroke-width="1"/>` +
+           `<text x="${lp.l - 8}" y="${ly(v) + 4}" font-size="11" fill="${faint}" text-anchor="end" style="font-variant-numeric:tabular-nums">${v.toFixed(1)}M</text>`;
+    });
+    const pts = balance.map((v, i) => `${lx(i)},${ly(v)}`).join(" ");
+    g += `<polyline points="${pts}" fill="none" stroke="${c1}" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/>`;
+    g += `<polygon points="${lp.l},${ly(min)} ${pts} ${lw - lp.r},${ly(min)}" fill="${c1}" opacity="0.08"/>`;
+    balance.forEach((v, i) => {
+      g += `<circle cx="${lx(i)}" cy="${ly(v)}" r="9" fill="transparent" data-tip="Week ${i + 1} · <b>USD ${v.toFixed(2)}M</b>"/>`;
+    });
+    g += `<line x1="${lp.l}" y1="${ly(min)}" x2="${lw - lp.r}" y2="${ly(min)}" stroke="${axis}" stroke-width="1"/>`;
+    L.innerHTML = g;
+
+    // Bar chart: grouped revenue vs expenditure, rounded data-ends, 2px gaps
+    const B = document.getElementById("barChart"); B.innerHTML = "";
+    const bp = { t: 12, r: 10, b: 24, l: 44 }, bmax = 400;
+    const groupW = (480 - bp.l - bp.r) / flows.labels.length;
+    const barW = 16, r = 4;
+    const by = v => bp.t + (1 - v / bmax) * (180 - bp.t - bp.b);
+    let b = "";
+    [100, 200, 300, 400].forEach(v => {
+      b += `<line x1="${bp.l}" y1="${by(v)}" x2="${480 - bp.r}" y2="${by(v)}" stroke="${grid}" stroke-width="1"/>` +
+           `<text x="${bp.l - 8}" y="${by(v) + 4}" font-size="11" fill="${faint}" text-anchor="end" style="font-variant-numeric:tabular-nums">${v}</text>`;
+    });
+    const roundedBar = (x, v, color, tip) => {
+      const y = by(v), h = by(0) - y;
+      return `<path d="M${x},${y + r} a${r},${r} 0 0 1 ${r},-${r} h${barW - 2 * r} a${r},${r} 0 0 1 ${r},${r} v${h - r} h-${barW} z"
+        fill="${color}" data-tip="${tip}"/>`;
+    };
+    flows.labels.forEach((m, i) => {
+      const cx = bp.l + i * groupW + groupW / 2;
+      b += roundedBar(cx - barW - 1, flows.revenue[i], c1, `${m} · Revenue · <b>USD ${flows.revenue[i]}k</b>`);
+      b += roundedBar(cx + 1, flows.expenditure[i], c2, `${m} · Expenditure · <b>USD ${flows.expenditure[i]}k</b>`);
+      b += `<text x="${cx}" y="${172}" font-size="11" fill="${faint}" text-anchor="middle">${m}</text>`;
+    });
+    b += `<line x1="${bp.l}" y1="${by(0)}" x2="${480 - bp.r}" y2="${by(0)}" stroke="${axis}" stroke-width="1"/>`;
+    B.innerHTML = b;
+
+    document.querySelectorAll("[data-tip]").forEach(el => {
+      el.addEventListener("mousemove", e => showTip(e, el.dataset.tip));
+      el.addEventListener("mouseleave", hideTip);
+    });
+  }
+
+  setTheme(window.matchMedia("(prefers-color-scheme: dark)").matches || true); // operator default: dark
+</script>
