@@ -9,37 +9,55 @@ import {
   type ChartConfig
 } from "@/components/ui/chart";
 import { Skeleton } from "@/components/ui/skeleton";
-import { useAuditEvents, useHealth, useInstitutions, useTransactions } from "@/hooks/use-treasury";
-import { formatTransactionAmount } from "@/history";
+import { useBalances, useHealth, useInstitutions, useJournalEntries } from "@/hooks/use-treasury";
+import { formatMoney } from "@/lib/money";
 
 const flowsConfig = {
-  amount: { label: "Amount", color: "var(--chart-1)" }
+  amount: { label: "Flow volume", color: "var(--chart-1)" }
 } satisfies ChartConfig;
 
-const timelineConfig = {
-  amount: { label: "Amount", color: "var(--chart-1)" }
+const stocksConfig = {
+  balance: { label: "Balance", color: "var(--chart-2)" }
 } satisfies ChartConfig;
 
 export default function OverviewPage() {
   const health = useHealth();
-  const transactions = useTransactions({ pageSize: 50 });
+  const entries = useJournalEntries({ pageSize: 100 });
+  const balances = useBalances({ pageSize: 100 });
   const institutions = useInstitutions();
-  const auditEvents = useAuditEvents({ pageSize: 50 });
 
-  const txs = transactions.data?.ok ? transactions.data.transactions : [];
-  const totalMinor = txs.reduce((sum, tx) => sum + tx.amountMinor, 0);
-  const currency = txs[0]?.currency ?? "USD";
+  const entryRows = entries.data?.ok ? entries.data.entries : [];
+  const balanceRows = balances.data?.ok ? balances.data.balances : [];
 
-  const byInstitution = Object.entries(
-    txs.reduce<Record<string, number>>((acc, tx) => {
-      acc[tx.institutionId] = (acc[tx.institutionId] ?? 0) + tx.amountMinor / 100;
-      return acc;
-    }, {})
-  ).map(([institution, amount]) => ({ institution, amount }));
+  const currency = balanceRows[0]?.currency ?? entryRows[0]?.lines[0]?.currency ?? "USD";
 
-  const timeline = [...txs]
-    .sort((a, b) => a.transactionDate.localeCompare(b.transactionDate))
-    .map((tx) => ({ date: tx.transactionDate, amount: tx.amountMinor / 100 }));
+  // Stocks: cash position = net of ASSET-typed balances.
+  const assetNetMinor = balanceRows
+    .filter((balance) => balance.accountType === "ASSET")
+    .reduce((sum, balance) => sum + balance.balanceMinor, 0);
+
+  // Flows: total debit volume posted, and a per-date series.
+  const flowByDate = new Map<string, number>();
+  let totalFlowMinor = 0;
+  for (const entry of entryRows) {
+    const debit = entry.lines
+      .filter((line) => line.direction === "DEBIT")
+      .reduce((sum, line) => sum + line.amountMinor, 0);
+    totalFlowMinor += debit;
+    flowByDate.set(entry.effectiveDate, (flowByDate.get(entry.effectiveDate) ?? 0) + debit / 100);
+  }
+  const flowSeries = [...flowByDate.entries()]
+    .sort(([a], [b]) => a.localeCompare(b))
+    .map(([date, amount]) => ({ date, amount }));
+
+  const stockSeries = balanceRows
+    .filter((balance) => balance.accountType === "ASSET" || balance.accountType === "LIABILITY")
+    .map((balance) => ({
+      account: balance.accountCode,
+      balance: balance.balanceMinor / 100
+    }));
+
+  const isPending = entries.isPending || balances.isPending;
 
   return (
     <>
@@ -49,19 +67,20 @@ export default function OverviewPage() {
       />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
-          label="Recorded volume"
-          value={txs.length > 0 ? formatTransactionAmount(currency, totalMinor) : "—"}
-          hint={`${txs.length} transactions`}
+          label="Cash & financial assets"
+          value={balanceRows.length > 0 ? formatMoney(currency, assetNetMinor) : "—"}
+          hint="net posted position"
+          tone={assetNetMinor >= 0 ? "up" : "down"}
+        />
+        <StatTile
+          label="Posted flow volume"
+          value={entryRows.length > 0 ? formatMoney(currency, totalFlowMinor) : "—"}
+          hint={`${entries.data?.ok ? entries.data.pagination.total : 0} journal entries`}
         />
         <StatTile
           label="Institutions"
           value={institutions.data?.ok ? String(institutions.data.institutions.length) : "—"}
           hint="reporting"
-        />
-        <StatTile
-          label="Audit events"
-          value={auditEvents.data?.ok ? String(auditEvents.data.events.length) : "—"}
-          hint="recorded"
         />
         <StatTile
           label="API latency"
@@ -73,25 +92,25 @@ export default function OverviewPage() {
       <div className="grid gap-4 lg:grid-cols-2">
         <Card>
           <CardHeader>
-            <CardTitle>Transaction amounts over time</CardTitle>
-            <CardDescription>Posted transactions by effective date</CardDescription>
+            <CardTitle>Flows over time</CardTitle>
+            <CardDescription>Posted journal volume by effective date</CardDescription>
           </CardHeader>
           <CardContent>
-            {transactions.isPending ? (
+            {isPending ? (
               <Skeleton className="h-[220px] w-full" />
             ) : (
-              <ChartContainer config={timelineConfig} className="h-[220px] w-full">
-                <LineChart data={timeline} margin={{ left: 12, right: 12 }}>
+              <ChartContainer config={flowsConfig} className="h-[220px] w-full">
+                <LineChart data={flowSeries} margin={{ left: 12, right: 12 }}>
                   <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
                   <XAxis dataKey="date" tickLine={false} axisLine={false} tickMargin={8} />
-                  <YAxis tickLine={false} axisLine={false} width={56} />
+                  <YAxis tickLine={false} axisLine={false} width={64} />
                   <ChartTooltip content={<ChartTooltipContent />} />
                   <Line
                     dataKey="amount"
                     type="monotone"
                     stroke="var(--color-amount)"
                     strokeWidth={2}
-                    dot={false}
+                    dot={{ r: 3 }}
                   />
                 </LineChart>
               </ChartContainer>
@@ -100,20 +119,20 @@ export default function OverviewPage() {
         </Card>
         <Card>
           <CardHeader>
-            <CardTitle>Flows by institution</CardTitle>
-            <CardDescription>Total recorded amount per institution</CardDescription>
+            <CardTitle>Stocks by account</CardTitle>
+            <CardDescription>Net balances on asset and liability accounts</CardDescription>
           </CardHeader>
           <CardContent>
-            {transactions.isPending ? (
+            {isPending ? (
               <Skeleton className="h-[220px] w-full" />
             ) : (
-              <ChartContainer config={flowsConfig} className="h-[220px] w-full">
-                <BarChart data={byInstitution} margin={{ left: 12, right: 12 }}>
+              <ChartContainer config={stocksConfig} className="h-[220px] w-full">
+                <BarChart data={stockSeries} margin={{ left: 12, right: 12 }}>
                   <CartesianGrid vertical={false} stroke="var(--chart-grid)" />
-                  <XAxis dataKey="institution" tickLine={false} axisLine={false} tickMargin={8} />
-                  <YAxis tickLine={false} axisLine={false} width={56} />
+                  <XAxis dataKey="account" tickLine={false} axisLine={false} tickMargin={8} />
+                  <YAxis tickLine={false} axisLine={false} width={64} />
                   <ChartTooltip content={<ChartTooltipContent />} />
-                  <Bar dataKey="amount" fill="var(--color-amount)" radius={[4, 4, 0, 0]} />
+                  <Bar dataKey="balance" fill="var(--color-balance)" radius={[4, 4, 0, 0]} />
                 </BarChart>
               </ChartContainer>
             )}
