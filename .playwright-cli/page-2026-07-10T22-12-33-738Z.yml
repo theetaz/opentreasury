@@ -1,7 +1,0 @@
-- generic [ref=e4]:
-  - img [ref=e6]
-  - generic [ref=e9]:
-    - heading "OpenTreasury" [level=1] [ref=e10]
-    - paragraph [ref=e11]: Sign in to access treasury data.
-  - button "Sign in" [ref=e12]
-  - paragraph [ref=e13]: "Demo users: treasury-admin · institution-user · auditor"
