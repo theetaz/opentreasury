@@ -136,7 +136,10 @@ func NewRouter(options ...RouterOption) http.Handler {
 		option(&config)
 	}
 
+	metrics := newRequestMetrics()
+
 	mux := http.NewServeMux()
+	mux.Handle("GET /metrics", metrics.handler())
 	mux.HandleFunc("GET /healthz", health)
 	mux.HandleFunc("GET /readyz", config.readiness)
 	mux.HandleFunc("GET /v1/accounts", config.listAccounts)
@@ -157,6 +160,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 	if config.tokenVerifier != nil {
 		handler = auth.Middleware(config.tokenVerifier, isPublicPath, handler)
 	}
+	handler = withMetrics(metrics, mux, handler)
 	handler = config.withCORS(handler)
 	handler = withMaxBodyBytes(config.maxBodyBytes, handler)
 	handler = withRecovery(config.logger, handler)
@@ -166,10 +170,11 @@ func NewRouter(options ...RouterOption) http.Handler {
 }
 
 // isPublicPath matches routes served without authentication: liveness/
-// readiness probes and the anonymous public read tier.
+// readiness probes, the Prometheus scrape endpoint (cluster-internal in
+// production deployments), and the anonymous public read tier.
 func isPublicPath(request *http.Request) bool {
 	path := request.URL.Path
-	if path == "/healthz" || path == "/readyz" {
+	if path == "/healthz" || path == "/readyz" || path == "/metrics" {
 		return true
 	}
 	return strings.HasPrefix(path, "/public/")

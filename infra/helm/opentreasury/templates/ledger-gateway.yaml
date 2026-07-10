@@ -1,0 +1,51 @@
+{{- if .Values.ledgerGateway.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opentreasury.fullname" . }}-ledger-gateway
+  labels:
+    {{- include "opentreasury.labels" . | nindent 4 }}
+    app.kubernetes.io/component: ledger-gateway
+spec:
+  replicas: {{ .Values.ledgerGateway.replicas }}
+  selector:
+    matchLabels:
+      {{- include "opentreasury.selectorLabels" (dict "root" . "component" "ledger-gateway") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "opentreasury.selectorLabels" (dict "root" . "component" "ledger-gateway") | nindent 8 }}
+      annotations:
+        {{- include "opentreasury.metricsAnnotations" (dict "root" . "port" .Values.ledgerGateway.metricsPort) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "opentreasury.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: ledger-gateway
+          image: {{ include "opentreasury.image" (dict "root" . "component" "ledger-gateway") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: metrics
+              containerPort: {{ .Values.ledgerGateway.metricsPort }}
+          env:
+            - name: OPENTREASURY_DATABASE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "opentreasury.databaseSecretName" . }}
+                  key: dsn
+            - name: OPENTREASURY_METRICS_ADDR
+              value: ":{{ .Values.ledgerGateway.metricsPort }}"
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          securityContext:
+            {{- include "opentreasury.securityContext" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.ledgerGateway.resources | nindent 12 }}
+{{- end }}

@@ -19,6 +19,15 @@ jobs:
           - name: core-api
             context: services/core-api
             dockerfile: services/core-api/Dockerfile
+          - name: ledger-gateway
+            context: services/ledger-gateway
+            dockerfile: services/ledger-gateway/Dockerfile
+          - name: mcp-server
+            context: services/mcp-server
+            dockerfile: services/mcp-server/Dockerfile
+          - name: generic-file-connector
+            context: services/connectors/generic-file
+            dockerfile: services/connectors/generic-file/Dockerfile
           - name: web
             context: .
             dockerfile: apps/web/Dockerfile

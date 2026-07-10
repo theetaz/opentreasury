@@ -1,0 +1,9 @@
+apiVersion: 1
+
+providers:
+  - name: opentreasury
+    folder: OpenTreasury
+    type: file
+    disableDeletion: true
+    options:
+      path: /var/lib/grafana/dashboards

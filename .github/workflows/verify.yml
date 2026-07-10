@@ -80,6 +80,30 @@ jobs:
       - name: Validate compose config
         run: make verify-compose
 
+  helm:
+    name: Helm chart
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: helm lint
+        run: helm lint infra/helm/opentreasury
+
+      - name: helm template (default values)
+        run: helm template opentreasury infra/helm/opentreasury > /dev/null
+
+      - name: helm template (all components enabled)
+        run: |
+          helm template opentreasury infra/helm/opentreasury \
+            --set database.dsn=postgres://u:p@db:5432/ot \
+            --set oidc.issuerUrl=https://id.example.org/realms/opentreasury \
+            --set ingress.enabled=true \
+            --set connector.enabled=true \
+            --set connector.tokenUrl=https://id.example.org/token \
+            --set connector.existingSecret=conn-secret \
+            --set connector.dropDir.existingClaim=drop-pvc > /dev/null
+
   security:
     name: Security scans
     runs-on: ubuntu-latest

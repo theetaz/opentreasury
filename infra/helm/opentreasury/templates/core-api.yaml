@@ -1,0 +1,83 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opentreasury.fullname" . }}-core-api
+  labels:
+    {{- include "opentreasury.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core-api
+spec:
+  replicas: {{ .Values.coreApi.replicas }}
+  selector:
+    matchLabels:
+      {{- include "opentreasury.selectorLabels" (dict "root" . "component" "core-api") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "opentreasury.selectorLabels" (dict "root" . "component" "core-api") | nindent 8 }}
+      annotations:
+        {{- include "opentreasury.metricsAnnotations" (dict "root" . "port" 8080) | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "opentreasury.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: core-api
+          image: {{ include "opentreasury.image" (dict "root" . "component" "core-api") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: 8080
+          env:
+            - name: OPENTREASURY_DATABASE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ include "opentreasury.databaseSecretName" . }}
+                  key: dsn
+            {{- with .Values.coreApi.allowedOrigins }}
+            - name: OPENTREASURY_ALLOWED_ORIGINS
+              value: {{ . | quote }}
+            {{- end }}
+            {{- if .Values.oidc.issuerUrl }}
+            - name: OPENTREASURY_OIDC_ISSUER_URL
+              value: {{ .Values.oidc.issuerUrl | quote }}
+            {{- with .Values.oidc.discoveryUrl }}
+            - name: OPENTREASURY_OIDC_DISCOVERY_URL
+              value: {{ . | quote }}
+            {{- end }}
+            - name: OPENTREASURY_OIDC_AUDIENCE
+              value: {{ .Values.oidc.audience | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /readyz
+              port: http
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+            initialDelaySeconds: 5
+            periodSeconds: 20
+          securityContext:
+            {{- include "opentreasury.securityContext" . | nindent 12 }}
+          resources:
+            {{- toYaml .Values.coreApi.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "opentreasury.fullname" . }}-core-api
+  labels:
+    {{- include "opentreasury.labels" . | nindent 4 }}
+    app.kubernetes.io/component: core-api
+spec:
+  type: {{ .Values.coreApi.service.type }}
+  ports:
+    - name: http
+      port: {{ .Values.coreApi.service.port }}
+      targetPort: http
+  selector:
+    {{- include "opentreasury.selectorLabels" (dict "root" . "component" "core-api") | nindent 4 }}

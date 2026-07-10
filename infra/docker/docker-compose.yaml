@@ -131,6 +131,35 @@ services:
     depends_on:
       - core-api
 
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    container_name: opentreasury-prometheus
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    ports:
+      - "9090:9090"
+    depends_on:
+      - core-api
+      - ledger-gateway
+
+  grafana:
+    image: grafana/grafana:12.3.0
+    container_name: opentreasury-grafana
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: opentreasury
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports:
+      # 3001 on the host: 3000 commonly collides with local Node dev servers.
+      - "3001:3000"
+    depends_on:
+      - prometheus
+
   web:
     build:
       context: ../..
