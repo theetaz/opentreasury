@@ -18,6 +18,7 @@ import (
 	_ "github.com/golang-migrate/migrate/v4/database/pgx/v5"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
 	_ "github.com/jackc/pgx/v5/stdlib"
+	"github.com/prometheus/client_golang/prometheus/testutil"
 	"github.com/stretchr/testify/require"
 	"github.com/testcontainers/testcontainers-go"
 	tcpostgres "github.com/testcontainers/testcontainers-go/modules/postgres"
@@ -106,6 +107,8 @@ func TestAnchorAndIndependentlyVerify(t *testing.T) {
 	count, err := service.AnchorPending(ctx)
 	require.NoError(t, err)
 	require.Equal(t, 3, count)
+	require.Equal(t, float64(3), testutil.ToFloat64(service.Metrics().EntriesAnchoredTotal),
+		"anchoring must be observable in the gateway metrics")
 
 	// Re-running is a no-op: everything is already anchored.
 	again, err := service.AnchorPending(ctx)

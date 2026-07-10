@@ -1,0 +1,122 @@
+# Default values for the OpenTreasury chart.
+# The chart is environment-neutral: no secrets ship here. Point it at your
+# PostgreSQL instance and OIDC provider, and supply credentials through an
+# existing Secret.
+
+image:
+  # All service images live under one registry prefix; each component appends
+  # its own name (core-api, ledger-gateway, mcp-server, web, generic-file-connector).
+  registry: ghcr.io/theetaz/opentreasury
+  # Defaults to the chart appVersion when empty.
+  tag: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  name: ""
+
+# PostgreSQL is the operational system of record and is NOT bundled — use a
+# managed database or an operator (e.g. CloudNativePG) and reference it here.
+database:
+  # Name of an existing Secret containing the connection string under key "dsn".
+  existingSecret: ""
+  # Inline DSN for development clusters only; when set (and existingSecret is
+  # empty) the chart renders a Secret from it. Never commit real credentials.
+  dsn: ""
+
+# OIDC provider (e.g. Keycloak). When issuerUrl is empty the API runs
+# unauthenticated — acceptable only for throwaway dev clusters.
+oidc:
+  issuerUrl: ""
+  # Optional in-cluster discovery URL when it differs from the public issuer.
+  discoveryUrl: ""
+  audience: opentreasury-web
+
+coreApi:
+  replicas: 2
+  # Comma-separated list of allowed browser origins (the web frontend URL).
+  allowedOrigins: ""
+  service:
+    type: ClusterIP
+    port: 8080
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      memory: 512Mi
+
+ledgerGateway:
+  enabled: true
+  # Anchoring is idempotent, but a single writer avoids contended batches.
+  replicas: 1
+  metricsPort: 9464
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+mcpServer:
+  enabled: true
+  replicas: 1
+  service:
+    type: ClusterIP
+    port: 8090
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+web:
+  enabled: true
+  replicas: 2
+  service:
+    type: ClusterIP
+    port: 80
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 128Mi
+
+# Optional generic file connector. Disabled by default: it needs a drop-dir
+# volume and connector client credentials specific to each deployment.
+connector:
+  enabled: false
+  profilePath: /profiles/itmis-payments.yaml
+  tokenUrl: ""
+  clientId: opentreasury-connector
+  # Existing Secret with key "clientSecret".
+  existingSecret: ""
+  dropDir:
+    # Name of an existing PersistentVolumeClaim mounted at /dropbox.
+    existingClaim: ""
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      memory: 256Mi
+
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # Hostnames for the web frontend and the API. TLS blocks follow the standard
+  # ingress schema.
+  webHost: opentreasury.example.org
+  apiHost: api.opentreasury.example.org
+  tls: []
+
+# Prometheus scrape annotations on instrumented pods (core-api, ledger-gateway).
+metrics:
+  annotations: true

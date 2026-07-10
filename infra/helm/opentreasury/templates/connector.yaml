@@ -1,0 +1,61 @@
+{{- if .Values.connector.enabled }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "opentreasury.fullname" . }}-connector
+  labels:
+    {{- include "opentreasury.labels" . | nindent 4 }}
+    app.kubernetes.io/component: connector
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "opentreasury.selectorLabels" (dict "root" . "component" "connector") | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "opentreasury.selectorLabels" (dict "root" . "component" "connector") | nindent 8 }}
+    spec:
+      serviceAccountName: {{ include "opentreasury.serviceAccountName" . }}
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: connector
+          image: {{ include "opentreasury.image" (dict "root" . "component" "generic-file-connector") }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          env:
+            - name: OPENTREASURY_DROP_DIR
+              value: /dropbox
+            - name: OPENTREASURY_PROFILE_PATH
+              value: {{ .Values.connector.profilePath | quote }}
+            - name: OPENTREASURY_STAGING_URL
+              value: http://{{ include "opentreasury.fullname" . }}-core-api:{{ .Values.coreApi.service.port }}
+            - name: OPENTREASURY_TOKEN_URL
+              value: {{ required "connector.tokenUrl is required when the connector is enabled" .Values.connector.tokenUrl | quote }}
+            - name: OPENTREASURY_CLIENT_ID
+              value: {{ .Values.connector.clientId | quote }}
+            - name: OPENTREASURY_CLIENT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: {{ required "connector.existingSecret is required when the connector is enabled" .Values.connector.existingSecret }}
+                  key: clientSecret
+          volumeMounts:
+            - name: dropbox
+              mountPath: /dropbox
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop: ["ALL"]
+            seccompProfile:
+              type: RuntimeDefault
+          resources:
+            {{- toYaml .Values.connector.resources | nindent 12 }}
+      volumes:
+        - name: dropbox
+          persistentVolumeClaim:
+            claimName: {{ required "connector.dropDir.existingClaim is required when the connector is enabled" .Values.connector.dropDir.existingClaim }}
+{{- end }}

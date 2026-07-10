@@ -33,9 +33,35 @@ Keycloak (identity), the core API, and the web app.
 - Core API: **http://localhost:8080** (`/healthz`, `/v1/...`)
 - Keycloak: **http://localhost:8085** (admin `admin`/`admin`)
 - MCP server: **http://localhost:8090** (streamable HTTP; tools over the public tier)
+- Prometheus: **http://localhost:9090**
+- Grafana: **http://localhost:3001** (anonymous viewer; admin `admin`/`opentreasury`)
 
 `make down` stops the stack; `make db-reset` wipes the data volume and
 re-seeds.
+
+## Observability
+
+The Go services expose Prometheus metrics:
+
+- `core-api` — `GET :8080/metrics`: `opentreasury_http_requests_total`
+  (labeled by matched route pattern and status — never raw paths) and
+  `opentreasury_http_request_duration_seconds`, plus Go runtime collectors.
+- `ledger-gateway` — `GET :9464/metrics` (`OPENTREASURY_METRICS_ADDR`):
+  `opentreasury_anchor_entries_total`, `opentreasury_anchor_batches_total`,
+  `opentreasury_anchor_failures_total`. The same listener serves `/healthz`.
+
+The compose stack runs Prometheus (scrape config in
+`infra/docker/prometheus/`) and Grafana with a provisioned "OpenTreasury
+Overview" dashboard (`infra/docker/grafana/`): request rate, p95 latency,
+error rate, and anchoring throughput.
+
+## Kubernetes (Helm)
+
+`infra/helm/opentreasury` deploys the services to a cluster; PostgreSQL and
+the OIDC provider are external dependencies supplied via values, and
+credentials come from existing Secrets. See the chart README for quick-start
+and production values. Validate changes with `helm lint infra/helm/opentreasury`
+(also enforced in CI).
 
 ## Authentication & Authorization
 

@@ -1,0 +1,29 @@
+OpenTreasury {{ .Chart.AppVersion }} deployed as release {{ .Release.Name }}.
+
+Components:
+  core-api        {{ include "opentreasury.fullname" . }}-core-api:{{ .Values.coreApi.service.port }}
+{{- if .Values.web.enabled }}
+  web             {{ include "opentreasury.fullname" . }}-web:{{ .Values.web.service.port }}
+{{- end }}
+{{- if .Values.mcpServer.enabled }}
+  mcp-server      {{ include "opentreasury.fullname" . }}-mcp-server:{{ .Values.mcpServer.service.port }}
+{{- end }}
+{{- if .Values.ledgerGateway.enabled }}
+  ledger-gateway  anchoring worker (metrics on :{{ .Values.ledgerGateway.metricsPort }})
+{{- end }}
+
+{{- if not .Values.database.existingSecret }}
+{{- if not .Values.database.dsn }}
+
+WARNING: no database configured. Set database.existingSecret (key "dsn")
+or, for development only, database.dsn.
+{{- end }}
+{{- end }}
+{{- if not .Values.oidc.issuerUrl }}
+
+WARNING: oidc.issuerUrl is empty — the API is running UNAUTHENTICATED.
+Point it at your OIDC realm before exposing this deployment.
+{{- end }}
+
+Run the database migrations before first use (see docs/development.md);
+the chart does not run them automatically.

@@ -20,6 +20,7 @@ type Service struct {
 	db        *sql.DB
 	backend   Backend
 	logger    *slog.Logger
+	metrics   *Metrics
 	batchSize int
 	interval  time.Duration
 }
@@ -29,10 +30,14 @@ func NewService(db *sql.DB, backend Backend, logger *slog.Logger) *Service {
 		db:        db,
 		backend:   backend,
 		logger:    logger,
+		metrics:   NewMetrics(),
 		batchSize: 500,
 		interval:  10 * time.Second,
 	}
 }
+
+// Metrics returns the service's Prometheus metrics for serving on a listener.
+func (s *Service) Metrics() *Metrics { return s.metrics }
 
 func (s *Service) Run(ctx context.Context) error {
 	s.logger.Info("ledger gateway anchoring started", "backend", s.backend.Name(), "interval", s.interval)
@@ -55,6 +60,7 @@ func (s *Service) Run(ctx context.Context) error {
 func (s *Service) anchorOnce(ctx context.Context) {
 	anchored, err := s.AnchorPending(ctx)
 	if err != nil {
+		s.metrics.RecordFailure()
 		s.logger.Error("anchoring batch failed", "error", err)
 		return
 	}
@@ -134,6 +140,7 @@ func (s *Service) AnchorPending(ctx context.Context) (int, error) {
 		return 0, err
 	}
 
+	s.metrics.RecordBatch(len(entries))
 	return len(entries), nil
 }
 

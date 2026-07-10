@@ -9,9 +9,11 @@ import (
 	"context"
 	"database/sql"
 	"log/slog"
+	"net/http"
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	_ "github.com/jackc/pgx/v5/stdlib"
 
@@ -41,6 +43,30 @@ func main() {
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+
+	// Serve Prometheus metrics and health on a side listener; the anchoring
+	// loop itself has no API surface.
+	metricsAddr := os.Getenv("OPENTREASURY_METRICS_ADDR")
+	if metricsAddr == "" {
+		metricsAddr = ":9464"
+	}
+	mux := http.NewServeMux()
+	mux.Handle("GET /metrics", service.Metrics().Handler())
+	mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, _ *http.Request) {
+		w.Header().Set("Content-Type", "application/json")
+		_, _ = w.Write([]byte(`{"status":"ok"}`))
+	})
+	metricsServer := &http.Server{Addr: metricsAddr, Handler: mux, ReadHeaderTimeout: 5 * time.Second}
+	go func() {
+		if err := metricsServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+			logger.Error("metrics listener failed", "error", err)
+		}
+	}()
+	defer func() {
+		shutdownCtx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+		defer cancel()
+		_ = metricsServer.Shutdown(shutdownCtx)
+	}()
 
 	if err := service.Run(ctx); err != nil && ctx.Err() == nil {
 		logger.Error("ledger gateway exited", "error", err)
