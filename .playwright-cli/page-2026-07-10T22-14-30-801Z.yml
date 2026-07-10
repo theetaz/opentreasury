@@ -1,0 +1,380 @@
+- generic:
+  - generic:
+    - generic:
+      - link:
+        - /url: "#main-content"
+        - text: Skip to content
+      - generic:
+        - generic:
+          - generic:
+            - generic:
+              - generic:
+                - generic: OT
+                - generic: OpenTreasury
+            - generic:
+              - generic:
+                - generic:
+                  - navigation:
+                    - list:
+                      - listitem:
+                        - link:
+                          - /url: /
+                          - img
+                          - generic: Overview
+                      - listitem:
+                        - link:
+                          - /url: /transactions
+                          - img
+                          - generic: Transactions
+                      - listitem:
+                        - link:
+                          - /url: /validation
+                          - img
+                          - generic: Validation
+                      - listitem:
+                        - link:
+                          - /url: /accounts
+                          - img
+                          - generic: Chart of accounts
+                      - listitem:
+                        - link:
+                          - /url: /journal
+                          - img
+                          - generic: Journal
+                      - listitem:
+                        - link:
+                          - /url: /commitments
+                          - img
+                          - generic: Commitments
+                      - listitem:
+                        - link:
+                          - /url: /balances
+                          - img
+                          - generic: Balances
+                      - listitem:
+                        - link:
+                          - /url: /ingestion
+                          - img
+                          - generic: Ingestion
+                      - listitem:
+                        - link:
+                          - /url: /reconciliation
+                          - img
+                          - generic: Reconciliation
+                      - listitem:
+                        - link:
+                          - /url: /insights
+                          - img
+                          - generic: Insights
+                      - listitem:
+                        - link:
+                          - /url: /institutions
+                          - img
+                          - generic: Institutions
+                      - listitem:
+                        - link:
+                          - /url: /audit
+                          - img
+                          - generic: Audit trail
+      - main:
+        - generic:
+          - button:
+            - img
+            - generic: Toggle Sidebar
+          - generic: Treasury / Journal
+          - generic: LOCAL
+          - generic:
+            - generic: API healthy
+            - button:
+              - img
+            - button:
+              - img
+            - button:
+              - img
+              - generic: treasury-admin
+        - generic:
+          - generic:
+            - generic:
+              - heading [level=1]: Journal
+              - paragraph: Balanced double-entry postings against the chart of accounts.
+            - button:
+              - img
+              - text: Post entry
+          - generic:
+            - generic:
+              - generic:
+                - generic: Institution
+                - combobox:
+                  - generic: All
+                  - img
+              - generic:
+                - generic: Status
+                - combobox:
+                  - generic: All
+                  - img
+              - generic:
+                - generic: Effective
+                - generic:
+                  - button:
+                    - img
+                    - generic: Any time
+          - generic:
+            - generic:
+              - generic:
+                - generic:
+                  - table:
+                    - rowgroup:
+                      - row:
+                        - columnheader: Entry
+                        - columnheader: Institution
+                        - columnheader: Effective
+                        - columnheader: Description
+                        - columnheader:
+                          - generic: Amount
+                        - columnheader: Lines
+                        - columnheader: Status
+                        - columnheader:
+                          - generic: Verify
+                    - rowgroup:
+                      - row:
+                        - cell: itmis-DEMO-2026-000022
+                        - cell: health
+                        - cell: 2026-12-30
+                        - cell: Imported from itmis (DEMO-2026-000022)
+                        - cell:
+                          - generic: USD 234,455.99
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button [expanded]:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000024
+                        - cell: minfin
+                        - cell: 2026-12-27
+                        - cell: Imported from itmis (DEMO-2026-000024)
+                        - cell:
+                          - generic: USD 84,762.39
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000013
+                        - cell: minfin
+                        - cell: 2026-12-27
+                        - cell: Imported from itmis (DEMO-2026-000013)
+                        - cell:
+                          - generic: USD 170,044.36
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000010
+                        - cell: health
+                        - cell: 2026-11-05
+                        - cell: Imported from itmis (DEMO-2026-000010)
+                        - cell:
+                          - generic: USD 241,197.83
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000025
+                        - cell: health
+                        - cell: 2026-10-24
+                        - cell: Imported from itmis (DEMO-2026-000025)
+                        - cell:
+                          - generic: USD 242,328.46
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000016
+                        - cell: minfin
+                        - cell: 2026-10-15
+                        - cell: Imported from itmis (DEMO-2026-000016)
+                        - cell:
+                          - generic: USD 203,187.56
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000023
+                        - cell: minfin
+                        - cell: 2026-09-30
+                        - cell: Imported from itmis (DEMO-2026-000023)
+                        - cell:
+                          - generic: USD 189,294.77
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000020
+                        - cell: health
+                        - cell: 2026-09-08
+                        - cell: Imported from itmis (DEMO-2026-000020)
+                        - cell:
+                          - generic: USD 23,652.11
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000012
+                        - cell: health
+                        - cell: 2026-08-25
+                        - cell: Imported from itmis (DEMO-2026-000012)
+                        - cell:
+                          - generic: USD 56,078.40
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000007
+                        - cell: health
+                        - cell: 2026-08-24
+                        - cell: Imported from itmis (DEMO-2026-000007)
+                        - cell:
+                          - generic: USD 91,675.99
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000003
+                        - cell: minfin
+                        - cell: 2026-08-16
+                        - cell: Imported from itmis (DEMO-2026-000003)
+                        - cell:
+                          - generic: USD 100,218.27
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000005
+                        - cell: minfin
+                        - cell: 2026-08-14
+                        - cell: Imported from itmis (DEMO-2026-000005)
+                        - cell:
+                          - generic: USD 192,239.80
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000017
+                        - cell: health
+                        - cell: 2026-08-13
+                        - cell: Imported from itmis (DEMO-2026-000017)
+                        - cell:
+                          - generic: USD 21,559.44
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000008
+                        - cell: minfin
+                        - cell: 2026-08-12
+                        - cell: Imported from itmis (DEMO-2026-000008)
+                        - cell:
+                          - generic: USD 30,085.50
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+                      - row:
+                        - cell: itmis-DEMO-2026-000002
+                        - cell: health
+                        - cell: 2026-08-01
+                        - cell: Imported from itmis (DEMO-2026-000002)
+                        - cell:
+                          - generic: USD 221,277.13
+                        - cell: "2"
+                        - cell:
+                          - generic: POSTED
+                        - cell:
+                          - button:
+                            - img
+                            - text: Verify
+              - generic:
+                - generic: 1–15 of 38
+                - generic:
+                  - combobox:
+                    - generic: 15 / page
+                    - img
+                  - button [disabled]:
+                    - img
+                  - generic: 1 / 3
+                  - button:
+                    - img
+      - region "Notifications alt+T"
+  - dialog "Verify entry itmis-DEMO-2026-000022" [ref=e354]:
+    - generic [ref=e355]:
+      - heading "Verify entry itmis-DEMO-2026-000022" [level=2] [ref=e356]
+      - paragraph [ref=e357]: Recomputed in your browser from the entry and its Merkle proof — independent of our servers.
+    - generic [ref=e358]:
+      - generic [ref=e359]:
+        - img [ref=e360]
+        - generic [ref=e363]: Verified — anchored, unmodified.
+      - generic [ref=e364]:
+        - term [ref=e365]: Leaf hash
+        - definition [ref=e366]: f942dd5ca6c0981ecbe4826108eb829ce1bb9eaf12ee433462f497fec162f58b
+        - term [ref=e367]: Merkle root
+        - definition [ref=e368]: 825f7e2060fb7164f6512884e80fa73c2007652ff82d25484f5c1329a25eb737
+        - term [ref=e369]: Backend
+        - definition [ref=e370]: fabric
+        - term [ref=e371]: Anchored
+        - definition [ref=e372]: 2026-07-10 07:37:02.874408+00
+    - button "Close" [active] [ref=e373]:
+      - img
+      - generic [ref=e374]: Close

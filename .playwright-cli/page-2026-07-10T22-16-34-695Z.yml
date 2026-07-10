@@ -1,0 +1,31 @@
+- generic [ref=e8]:
+  - generic [ref=e11]:
+    - heading "Overview" [level=1] [ref=e13]
+    - generic [ref=e17]:
+      - generic [ref=e19]:
+        - generic [ref=e20]: Public ledger
+        - generic [ref=e21]:
+          - generic [ref=e22]:
+            - generic [ref=e23]: Published entries
+            - generic [ref=e24]: —
+          - generic [ref=e25]:
+            - generic [ref=e26]: Institutions
+            - generic [ref=e27]: —
+        - generic [ref=e28]: Every entry below is published under the publication policy and can be verified independently — open one and tap Verify.
+      - generic [ref=e30]: Loading published entries…
+  - tablist [ref=e32]:
+    - tab "◉ ◉ Overview" [selected] [ref=e34] [cursor=pointer]:
+      - generic [ref=e35]:
+        - generic [ref=e37]: ◉
+        - generic [ref=e39]: ◉
+      - generic [ref=e40]: Overview
+    - tab "≣ ≣ Explorer" [ref=e42] [cursor=pointer]:
+      - generic [ref=e43]:
+        - generic [ref=e45]: ≣
+        - generic [ref=e47]: ≣
+      - generic [ref=e48]: Explorer
+    - tab "⌂ ⌂ Institutions" [ref=e50] [cursor=pointer]:
+      - generic [ref=e51]:
+        - generic [ref=e53]: ⌂
+        - generic [ref=e55]: ⌂
+      - generic [ref=e56]: Institutions

@@ -60,7 +60,7 @@ OpenTreasury separates operational truth from public traceability:
 
 ## Current Status
 
-OpenTreasury is in early project scaffolding. The current repository provides the initial monorepo layout, starter package metadata, Go module boundaries, and verification commands.
+OpenTreasury is feature-complete through its first release (v0.1.0) and under active development. All five core capabilities work end to end: the double-entry financial core with commitments and reconciliation, identity and policy-based authorization, file-based ingestion from existing government systems, Merkle anchoring on a multi-organization Hyperledger Fabric network with independent verification (CLI, browser, and on-device mobile), and public APIs including an MCP server. The stack runs locally with one command, deploys to Kubernetes via Helm, and ships signed container images with attested SBOMs. See the [white paper](docs/whitepaper.md) for the full picture.
 
 ## Development
 
@@ -85,14 +85,13 @@ make verify
 
 The initial verification runs Go tests for scaffolded Go modules. JavaScript checks run after dependencies are installed.
 
-## Planned Service Boundaries
+## Service Boundaries
 
 - `services/core-api`: treasury rules, transaction lifecycle, public/private API contracts, and persistence boundaries.
-- `services/connectors/generic-file`: initial file-based ingestion connector.
-- `services/ledger-gateway`: ledger publication gateway for Hyperledger Fabric.
-- `services/mcp-server`: integration server for read-only analytical and operational tooling.
-- `workers/treasury-worker`: durable imports, reconciliation, ledger submission, and background workflows.
-- `chaincode/treasury`: public-safe traceability records for Hyperledger Fabric.
+- `services/connectors/generic-file`: file-based ingestion connector driven by YAML mapping profiles.
+- `services/ledger-gateway`: Merkle batching and anchoring to the pluggable traceability backend (transparency log or Fabric).
+- `services/mcp-server`: MCP server exposing the anonymous public tier to AI assistants.
+- `chaincode/treasury`: immutable anchor records on Hyperledger Fabric, endorsed by both the treasury and audit organizations.
 
 ## Security Principles
 
@@ -116,6 +115,10 @@ Guiding expectations:
 ## Security
 
 Report vulnerabilities privately — see [SECURITY.md](SECURITY.md). Never open public issues for security problems.
+
+## White Paper
+
+[docs/whitepaper.md](docs/whitepaper.md) explains the whole project in one place — why it exists, how every layer works, how anyone can verify the numbers, and what it takes to run it — with architecture diagrams and screenshots from the running system.
 
 ## Deploying and Onboarding
 
