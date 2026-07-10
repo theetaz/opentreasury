@@ -55,6 +55,21 @@ The compose stack runs Prometheus (scrape config in
 Overview" dashboard (`infra/docker/grafana/`): request rate, p95 latency,
 error rate, and anchoring throughput.
 
+Alerting and logs complete the operator loop:
+
+- **Alert rules** in `infra/docker/prometheus/alerts.yml` (API down/errors/
+  latency, anchoring failures, anchor lag, gateway down), each linked to a
+  runbook in [runbooks.md](runbooks.md). Validate changes with
+  `promtool check rules`.
+- **Anchor lag** is a first-class metric: `opentreasury_anchor_lag_entries`
+  (posted entries without an anchor) and
+  `opentreasury_anchor_last_success_timestamp_seconds`.
+- **Loki + Promtail** aggregate container logs, labeled by compose service —
+  query them in Grafana (Loki datasource), e.g. `{service="core-api"} |= "internal error"`.
+
+Backup and disaster recovery procedures live in
+[operations-backup-dr.md](operations-backup-dr.md).
+
 ## Internationalization & Accessibility
 
 The web app ships English and Kiswahili end to end; the language switcher

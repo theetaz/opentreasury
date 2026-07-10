@@ -16,6 +16,10 @@ type Metrics struct {
 	EntriesAnchoredTotal prometheus.Counter
 	BatchesTotal         prometheus.Counter
 	FailuresTotal        prometheus.Counter
+	// AnchorLag is how many posted entries are not yet anchored — the primary
+	// operator signal that traceability is falling behind the ledger.
+	AnchorLag            prometheus.Gauge
+	LastSuccessTimestamp prometheus.Gauge
 }
 
 func NewMetrics() *Metrics {
@@ -39,15 +43,32 @@ func NewMetrics() *Metrics {
 			Name: "opentreasury_anchor_failures_total",
 			Help: "Anchoring attempts that failed.",
 		}),
+		AnchorLag: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "opentreasury_anchor_lag_entries",
+			Help: "Posted journal entries not yet anchored.",
+		}),
+		LastSuccessTimestamp: prometheus.NewGauge(prometheus.GaugeOpts{
+			Name: "opentreasury_anchor_last_success_timestamp_seconds",
+			Help: "Unix time of the last successfully committed anchor batch.",
+		}),
 	}
-	registry.MustRegister(metrics.EntriesAnchoredTotal, metrics.BatchesTotal, metrics.FailuresTotal)
+	registry.MustRegister(
+		metrics.EntriesAnchoredTotal, metrics.BatchesTotal, metrics.FailuresTotal,
+		metrics.AnchorLag, metrics.LastSuccessTimestamp,
+	)
 	return metrics
+}
+
+// RecordLag publishes the current count of unanchored posted entries.
+func (m *Metrics) RecordLag(entries int) {
+	m.AnchorLag.Set(float64(entries))
 }
 
 // RecordBatch records one committed batch of anchored entries.
 func (m *Metrics) RecordBatch(entries int) {
 	m.BatchesTotal.Inc()
 	m.EntriesAnchoredTotal.Add(float64(entries))
+	m.LastSuccessTimestamp.SetToCurrentTime()
 }
 
 func (m *Metrics) RecordFailure() {

@@ -62,11 +62,26 @@ func (s *Service) anchorOnce(ctx context.Context) {
 	if err != nil {
 		s.metrics.RecordFailure()
 		s.logger.Error("anchoring batch failed", "error", err)
-		return
-	}
-	if anchored > 0 {
+	} else if anchored > 0 {
 		s.logger.Info("batch anchored", "entries", anchored, "backend", s.backend.Name())
 	}
+
+	// Publish the remaining lag regardless of outcome: after a failure it is
+	// the alerting signal; after success it confirms the backlog drained.
+	if lag, lagErr := s.countUnanchored(ctx); lagErr == nil {
+		s.metrics.RecordLag(lag)
+	}
+}
+
+func (s *Service) countUnanchored(ctx context.Context) (int, error) {
+	var count int
+	err := s.db.QueryRowContext(ctx, `
+		SELECT COUNT(*)
+		FROM journal_entries e
+		LEFT JOIN journal_entry_anchors a ON a.entry_id = e.id
+		WHERE a.entry_id IS NULL
+	`).Scan(&count)
+	return count, err
 }
 
 // unanchoredEntry is a posted entry with no anchor proof yet.
