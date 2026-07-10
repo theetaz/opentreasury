@@ -9,6 +9,7 @@ const TransactionsPage = lazy(() => import("./transactions"));
 const ValidationPage = lazy(() => import("./validation"));
 const AccountsPage = lazy(() => import("./accounts"));
 const JournalPage = lazy(() => import("./journal"));
+const CommitmentsPage = lazy(() => import("./commitments"));
 const BalancesPage = lazy(() => import("./balances"));
 const IngestionPage = lazy(() => import("./ingestion"));
 const ReconciliationPage = lazy(() => import("./reconciliation"));
@@ -40,6 +41,7 @@ export const routes: RouteObject[] = [
       { path: "validation", element: page(<ValidationPage />) },
       { path: "accounts", element: page(<AccountsPage />) },
       { path: "journal", element: page(<JournalPage />) },
+      { path: "commitments", element: page(<CommitmentsPage />) },
       { path: "balances", element: page(<BalancesPage />) },
       { path: "ingestion", element: page(<IngestionPage />) },
       { path: "reconciliation", element: page(<ReconciliationPage />) },

@@ -82,6 +82,12 @@ func (repository *PostgresJournalRepository) PostEntry(ctx context.Context, entr
 		}
 	}
 
+	if entry.CommitmentID != "" {
+		if err := settleCommitment(ctx, dbTx, entry); err != nil {
+			return err
+		}
+	}
+
 	metadata := auditMetadataFromContext(ctx)
 	if _, err := dbTx.ExecContext(ctx, `
 		INSERT INTO audit_events (event_type, transaction_id, institution_id, summary, actor, request_id)
@@ -94,6 +100,65 @@ func (repository *PostgresJournalRepository) PostEntry(ctx context.Context, entr
 	}
 
 	return dbTx.Commit()
+}
+
+// settleCommitment records the entry against its commitment inside the same
+// transaction as the posting itself: locked, never over-settled, and flipped
+// to SETTLED exactly when the committed amount is reached.
+func settleCommitment(ctx context.Context, dbTx *sql.Tx, entry JournalEntry) error {
+	var institutionID, currency, status string
+	var amountMinor, settledMinor int64
+	err := dbTx.QueryRowContext(ctx, `
+		SELECT
+			c.institution_id, c.currency, c.status, c.amount_minor,
+			COALESCE((SELECT SUM(amount_minor) FROM commitment_settlements WHERE commitment_id = c.id), 0)
+		FROM commitments c
+		WHERE c.id = $1
+		FOR UPDATE OF c
+	`, entry.CommitmentID).Scan(&institutionID, &currency, &status, &amountMinor, &settledMinor)
+	if err == sql.ErrNoRows {
+		return fmt.Errorf("settling commitment %q: %w", entry.CommitmentID, ErrUnknownCommitment)
+	}
+	if err != nil {
+		return err
+	}
+
+	if status != "OPEN" {
+		return fmt.Errorf("settling commitment %q: %w", entry.CommitmentID, ErrCommitmentClosed)
+	}
+	if institutionID != entry.InstitutionID {
+		return fmt.Errorf("settling commitment %q: %w", entry.CommitmentID, ErrCommitmentMismatch)
+	}
+
+	var settlementMinor int64
+	for _, line := range entry.Lines {
+		if line.Direction == "DEBIT" && line.Currency == currency {
+			settlementMinor += line.AmountMinor
+		}
+	}
+	if settlementMinor == 0 {
+		return fmt.Errorf("settling commitment %q: %w", entry.CommitmentID, ErrCommitmentMismatch)
+	}
+	if settledMinor+settlementMinor > amountMinor {
+		return fmt.Errorf("settling commitment %q: %w", entry.CommitmentID, ErrCommitmentExceeded)
+	}
+
+	if _, err := dbTx.ExecContext(ctx, `
+		INSERT INTO commitment_settlements (commitment_id, entry_id, amount_minor)
+		VALUES ($1, $2, $3)
+	`, entry.CommitmentID, entry.ID, settlementMinor); err != nil {
+		return err
+	}
+
+	if settledMinor+settlementMinor == amountMinor {
+		if _, err := dbTx.ExecContext(ctx,
+			"UPDATE commitments SET status = 'SETTLED' WHERE id = $1", entry.CommitmentID,
+		); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func eventTypeFor(entryType string) string {

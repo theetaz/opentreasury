@@ -34,6 +34,34 @@ export type TransactionListFilter = {
   limit?: number;
 };
 
+export type Commitment = {
+  id: string;
+  institutionId: string;
+  fiscalYear: number;
+  accountCode: string;
+  description: string;
+  amountMinor: number;
+  currency: string;
+  committedDate: string;
+  status: "OPEN" | "SETTLED" | "CANCELLED";
+  settledAmountMinor: number;
+  remainingAmountMinor: number;
+};
+
+export type CommitmentInput = Omit<Commitment, "status" | "settledAmountMinor" | "remainingAmountMinor">;
+
+export type CommitmentListFilter = {
+  institutionId?: string;
+  fiscalYear?: number;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type CommitmentListResult =
+  | { ok: true; commitments: Commitment[]; pagination: PageInfo }
+  | { ok: false; error: string };
+
 export type ReconciliationRow = {
   sourceSystem: string;
   period: string;
@@ -676,6 +704,80 @@ export function buildStagingPath(filter: StagingListFilter = {}): string {
   if (filter.pageSize) params.set("pageSize", String(filter.pageSize));
   const query = params.toString();
   return query ? `/v1/staging-records?${query}` : "/v1/staging-records";
+}
+
+const simulatedCommitments: Commitment[] = [
+  {
+    id: "com-2026-0001", institutionId: "minfin", fiscalYear: 2026, accountCode: "22",
+    description: "Road maintenance framework contract", amountMinor: 50000000, currency: "USD",
+    committedDate: "2026-06-15", status: "OPEN", settledAmountMinor: 18500000, remainingAmountMinor: 31500000
+  },
+  {
+    id: "com-2026-0002", institutionId: "health", fiscalYear: 2026, accountCode: "22",
+    description: "Vaccine cold-chain equipment", amountMinor: 12000000, currency: "USD",
+    committedDate: "2026-05-02", status: "SETTLED", settledAmountMinor: 12000000, remainingAmountMinor: 0
+  }
+];
+
+export async function listCommitments(filter: CommitmentListFilter = {}): Promise<CommitmentListResult> {
+  if (!apiBaseUrl) {
+    const matches = simulatedCommitments
+      .filter((c) => !filter.institutionId || c.institutionId === filter.institutionId)
+      .filter((c) => !filter.fiscalYear || c.fiscalYear === filter.fiscalYear)
+      .filter((c) => !filter.status || c.status === filter.status);
+    const { rows, pagination } = paginate(matches, pageWindow(filter));
+    return { ok: true, commitments: rows, pagination };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (filter.institutionId) params.set("institutionId", filter.institutionId);
+    if (filter.fiscalYear) params.set("fiscalYear", String(filter.fiscalYear));
+    if (filter.status) params.set("status", filter.status);
+    params.set("page", String(filter.page ?? 1));
+    params.set("pageSize", String(filter.pageSize ?? 15));
+
+    const response = await fetch(`${apiBaseUrl}/v1/commitments?${params}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { commitments?: Commitment[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      commitments: body.commitments ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.commitments?.length ?? 0)
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
+}
+
+export async function createCommitment(input: CommitmentInput): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!apiBaseUrl) {
+    simulatedCommitments.unshift({
+      ...input,
+      status: "OPEN",
+      settledAmountMinor: 0,
+      remainingAmountMinor: input.amountMinor
+    });
+    return { ok: true };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/commitments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(input)
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
 }
 
 const simulatedReconciliation: ReconciliationRow[] = [
