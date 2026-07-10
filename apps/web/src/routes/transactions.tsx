@@ -42,7 +42,7 @@ const columns: ColumnDef<TreasuryTransaction, unknown>[] = [
   {
     id: "status",
     header: "Status",
-    cell: () => <StatusBadge status="CREATED" />
+    cell: ({ row }) => <StatusBadge status={row.original.status} />
   }
 ];
 
@@ -54,6 +54,7 @@ export default function TransactionsPage() {
     () => ({
       institutionId: filters.institutionId,
       fiscalYear: filters.fiscalYear ? Number(filters.fiscalYear) : undefined,
+      status: filters.status,
       dateFrom: filters.dateFrom,
       dateTo: filters.dateTo,
       amountGte: filters.amountGte ? Number(filters.amountGte) : undefined,
@@ -89,6 +90,12 @@ export default function TransactionsPage() {
           value={filters.fiscalYear}
           options={fiscalYears.map((year) => ({ value: year, label: year }))}
           onChange={(value) => setFilter("fiscalYear", value)}
+        />
+        <SelectFilter
+          label="Status"
+          value={filters.status}
+          options={["PENDING", "POSTED", "REJECTED"].map((status) => ({ value: status, label: status }))}
+          onChange={(value) => setFilter("status", value)}
         />
         <DateRangeFilter
           dateFrom={filters.dateFrom}

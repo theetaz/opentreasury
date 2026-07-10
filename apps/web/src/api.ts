@@ -2,6 +2,8 @@ import { buildAuditEventsPath } from "./audit";
 import { buildTransactionsPath } from "./history";
 import { buildInstitutionsPath } from "./institutions";
 
+export type TransactionStatus = "PENDING" | "POSTED" | "REJECTED";
+
 export type TreasuryTransaction = {
   id: string;
   institutionId: string;
@@ -10,6 +12,7 @@ export type TreasuryTransaction = {
   currency: string;
   description: string;
   transactionDate: string;
+  status: TransactionStatus;
 };
 
 export type PageInfo = {
@@ -21,6 +24,7 @@ export type PageInfo = {
 export type TransactionListFilter = {
   institutionId?: string;
   fiscalYear?: number;
+  status?: string;
   dateFrom?: string;
   dateTo?: string;
   amountGte?: number;
@@ -300,7 +304,8 @@ const simulatedTransactions: TreasuryTransaction[] = [
     amountMinor: 125000,
     currency: "USD",
     description: "Road maintenance payment",
-    transactionDate: "2026-06-28"
+    transactionDate: "2026-06-28",
+    status: "POSTED",
   },
   {
     id: "txn-2026-0000",
@@ -309,7 +314,8 @@ const simulatedTransactions: TreasuryTransaction[] = [
     amountMinor: 98000,
     currency: "USD",
     description: "Bridge inspection payment",
-    transactionDate: "2026-06-27"
+    transactionDate: "2026-06-27",
+    status: "POSTED",
   },
   {
     id: "txn-2025-0942",
@@ -318,7 +324,8 @@ const simulatedTransactions: TreasuryTransaction[] = [
     amountMinor: 450000,
     currency: "USD",
     description: "Clinic equipment procurement",
-    transactionDate: "2025-12-18"
+    transactionDate: "2025-12-18",
+    status: "POSTED",
   }
 ];
 
@@ -792,6 +799,7 @@ function simulateTransactionList(filter: TransactionListFilter): TransactionList
   const matches = simulatedTransactions
     .filter((transaction) => !filter.institutionId || transaction.institutionId === filter.institutionId)
     .filter((transaction) => !filter.fiscalYear || transaction.fiscalYear === filter.fiscalYear)
+    .filter((transaction) => !filter.status || transaction.status === filter.status)
     .filter((transaction) => !filter.dateFrom || transaction.transactionDate >= filter.dateFrom)
     .filter((transaction) => !filter.dateTo || transaction.transactionDate <= filter.dateTo)
     .filter((transaction) => !filter.amountGte || transaction.amountMinor >= filter.amountGte)

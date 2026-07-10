@@ -291,6 +291,13 @@ paths:
             type: integer
             minimum: 1
           description: Filter transactions by fiscal year.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, POSTED, REJECTED]
+          description: Filter transactions by lifecycle status.
         - name: amountGte
           in: query
           required: false
@@ -669,6 +676,10 @@ components:
           type: string
           format: date
           example: "2026-06-28"
+        status:
+          type: string
+          enum: [PENDING, POSTED, REJECTED]
+          example: POSTED
     CreateTransactionResponse:
       type: object
       required:

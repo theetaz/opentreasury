@@ -32,8 +32,9 @@ func expectInsert(mock sqlmock.Sqlmock) *sqlmock.ExpectedExec {
 			amount_minor,
 			currency,
 			description,
-			transaction_date
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			transaction_date,
+			status
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`))
 }
 

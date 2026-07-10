@@ -472,6 +472,7 @@ type transactionResponse struct {
 	Currency        string `json:"currency"`
 	Description     string `json:"description"`
 	TransactionDate string `json:"transactionDate"`
+	Status          string `json:"status"`
 }
 
 type auditEventResponse struct {
@@ -590,6 +591,13 @@ func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactio
 		InstitutionID: query.Get("institutionId"),
 	}
 
+	if status := query.Get("status"); status != "" {
+		if _, ok := treasury.ValidTransactionStatuses[status]; !ok {
+			return treasury.ListTransactionsFilter{}, treasury.ErrInvalidStatus
+		}
+		filter.Status = status
+	}
+
 	if fiscalYear := query.Get("fiscalYear"); fiscalYear != "" {
 		value, err := strconv.Atoi(fiscalYear)
 		if err != nil || value <= 0 {
@@ -671,6 +679,7 @@ func toTransactionResponses(transactions []treasury.Transaction) []transactionRe
 			Currency:        tx.Currency,
 			Description:     tx.Description,
 			TransactionDate: tx.TransactionDate,
+			Status:          tx.Status,
 		})
 	}
 
