@@ -291,6 +291,13 @@ paths:
             type: integer
             minimum: 1
           description: Filter transactions by fiscal year.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [PENDING, POSTED, REJECTED]
+          description: Filter transactions by lifecycle status.
         - name: amountGte
           in: query
           required: false
@@ -365,6 +372,204 @@ paths:
           $ref: "#/components/responses/InternalError"
         "503":
           description: Transaction persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/commitments:
+    post:
+      operationId: createCommitment
+      summary: Record a budget commitment
+      description: >-
+        Encumbers budget before money moves — a signed contract or purchase
+        order. Journal entries settle it by referencing its id; settlements
+        may never exceed the committed amount.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitmentInput"
+      responses:
+        "201":
+          description: Commitment recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: A commitment with this id already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: The referenced institution does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Commitment persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: listCommitments
+      summary: List budget commitments with settled totals
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Filter by institution identifier.
+        - name: fiscalYear
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Filter by fiscal year.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [OPEN, SETTLED, CANCELLED]
+          description: Filter by commitment status.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Commitments for the selected filters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListCommitmentsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Commitment persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/insights/forecast:
+    get:
+      operationId: forecastInsights
+      summary: Project monthly posted flows
+      description: >-
+        History of monthly posted debit totals plus a projection using a
+        disclosed baseline method (3-month moving average with a ±1 MAD band).
+        The method travels with the numbers.
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+        - name: horizon
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+            default: 3
+          description: Months to project.
+      responses:
+        "200":
+          description: Flow history and projection.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForecastResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Insights persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/insights/anomalies:
+    get:
+      operationId: anomalyInsights
+      summary: Flag statistically unusual posted amounts
+      description: >-
+        Posted debit lines whose amount is far outside what is typical for
+        their account, scored with a disclosed robust method (modified
+        z-score via median/MAD, threshold 3.5).
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Anomalies ordered by score, highest first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnomaliesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Insights persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/reconciliation:
+    get:
+      operationId: listReconciliation
+      summary: Reconcile staged source records against posted journal entries
+      description: >-
+        Per source system and calendar month: how many records arrived in
+        staging, how many posted or were quarantined, and whether the staged
+        debit total matches what was actually posted to the journal.
+      parameters:
+        - name: sourceSystem
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Filter by originating source system.
+        - name: fiscalYear
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Filter by fiscal year.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Reconciliation rows for the selected filters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListReconciliationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Reconciliation persistence is not available.
           content:
             application/json:
               schema:
@@ -610,6 +815,215 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    MonthlyFlow:
+      type: object
+      required: [period, totalMinor]
+      properties:
+        period:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+        totalMinor:
+          type: integer
+          format: int64
+    ForecastPoint:
+      type: object
+      required: [period, projectedMinor, lowMinor, highMinor]
+      properties:
+        period:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+        projectedMinor:
+          type: integer
+          format: int64
+        lowMinor:
+          type: integer
+          format: int64
+        highMinor:
+          type: integer
+          format: int64
+    ForecastResponse:
+      type: object
+      required: [history, forecast, method]
+      properties:
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyFlow"
+        forecast:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForecastPoint"
+        method:
+          type: string
+          description: How the projection was computed — disclosed with the numbers.
+    Anomaly:
+      type: object
+      required: [entryId, institutionId, accountCode, amountMinor, effectiveDate, typicalMinor, score]
+      properties:
+        entryId:
+          type: string
+        institutionId:
+          type: string
+        accountCode:
+          type: string
+        amountMinor:
+          type: integer
+          format: int64
+        effectiveDate:
+          type: string
+        typicalMinor:
+          type: integer
+          format: int64
+          description: The account's median amount, the reference point.
+        score:
+          type: number
+          description: Modified z-score; flagged when above 3.5.
+    AnomaliesResponse:
+      type: object
+      required: [anomalies, method, pagination]
+      properties:
+        anomalies:
+          type: array
+          items:
+            $ref: "#/components/schemas/Anomaly"
+        method:
+          type: string
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    CommitmentInput:
+      type: object
+      required:
+        - id
+        - institutionId
+        - fiscalYear
+        - accountCode
+        - amountMinor
+        - currency
+        - committedDate
+      properties:
+        id:
+          type: string
+          minLength: 1
+          example: com-2026-0001
+        institutionId:
+          type: string
+          minLength: 1
+          example: minfin
+        fiscalYear:
+          type: integer
+          minimum: 1
+          example: 2026
+        accountCode:
+          type: string
+          minLength: 1
+          example: "22"
+        description:
+          type: string
+          example: Road maintenance framework contract
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 500000
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          example: USD
+        committedDate:
+          type: string
+          format: date
+          example: "2026-07-01"
+    Commitment:
+      allOf:
+        - $ref: "#/components/schemas/CommitmentInput"
+        - type: object
+          required:
+            - status
+            - settledAmountMinor
+            - remainingAmountMinor
+          properties:
+            status:
+              type: string
+              enum: [OPEN, SETTLED, CANCELLED]
+            settledAmountMinor:
+              type: integer
+              format: int64
+              minimum: 0
+            remainingAmountMinor:
+              type: integer
+              format: int64
+    ListCommitmentsResponse:
+      type: object
+      required:
+        - commitments
+        - pagination
+      properties:
+        commitments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Commitment"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    ReconciliationRow:
+      type: object
+      required:
+        - sourceSystem
+        - period
+        - stagedCount
+        - postedCount
+        - quarantinedCount
+        - stagedAmountMinor
+        - postedAmountMinor
+        - discrepancyMinor
+        - status
+      properties:
+        sourceSystem:
+          type: string
+          example: itmis
+        period:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+          example: "2026-07"
+        stagedCount:
+          type: integer
+          minimum: 0
+        postedCount:
+          type: integer
+          minimum: 0
+        quarantinedCount:
+          type: integer
+          minimum: 0
+        stagedAmountMinor:
+          type: integer
+          format: int64
+          description: Debit total of staged records that reached POSTED.
+        postedAmountMinor:
+          type: integer
+          format: int64
+          description: Debit total of the journal entries those records produced.
+        discrepancyMinor:
+          type: integer
+          format: int64
+          description: stagedAmountMinor minus postedAmountMinor; zero when reconciled.
+        status:
+          type: string
+          enum: [MATCHED, ATTENTION, DISCREPANCY]
+          description: >-
+            MATCHED — amounts agree and nothing quarantined. ATTENTION —
+            amounts agree but quarantined records need triage. DISCREPANCY —
+            staged and posted totals differ.
+    ListReconciliationResponse:
+      type: object
+      required:
+        - rows
+        - pagination
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconciliationRow"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     HealthResponse:
       type: object
       required:
@@ -669,6 +1083,10 @@ components:
           type: string
           format: date
           example: "2026-06-28"
+        status:
+          type: string
+          enum: [PENDING, POSTED, REJECTED]
+          example: POSTED
     CreateTransactionResponse:
       type: object
       required:
@@ -778,6 +1196,9 @@ components:
         effectiveDate: { type: string, format: date }
         description: { type: string }
         idempotencyKey: { type: string }
+        commitmentId:
+          type: string
+          description: Optional commitment this entry settles (in the same transaction).
         lines:
           type: array
           minItems: 2

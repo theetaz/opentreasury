@@ -54,10 +54,11 @@ func TestNewServerUsesDatabaseBackedTransactionRepository(t *testing.T) {
 			amount_minor,
 			currency,
 			description,
-			transaction_date
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			transaction_date,
+			status
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`)).
-		WithArgs("txn-2026-0001", "minfin", 2026, int64(125000), "USD", "Road maintenance payment", "2026-06-28").
+		WithArgs("txn-2026-0001", "minfin", 2026, int64(125000), "USD", "Road maintenance payment", "2026-06-28", "POSTED").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO audit_events")).
 		WillReturnResult(sqlmock.NewResult(0, 1))

@@ -10,7 +10,7 @@ import (
 )
 
 func transactionColumns() []string {
-	return []string{"id", "institution_id", "fiscal_year", "amount_minor", "currency", "description", "transaction_date", "total_count"}
+	return []string{"id", "institution_id", "fiscal_year", "amount_minor", "currency", "description", "transaction_date", "status", "total_count"}
 }
 
 func TestListTransactionsAppliesDateRangeAndAmountFilters(t *testing.T) {
@@ -19,7 +19,7 @@ func TestListTransactionsAppliesDateRangeAndAmountFilters(t *testing.T) {
 	defer func() { _ = db.Close() }()
 
 	rows := sqlmock.NewRows(transactionColumns()).
-		AddRow("txn-1", "minfin", 2026, int64(125000), "USD", "Road maintenance", "2026-06-28", 1)
+		AddRow("txn-1", "minfin", 2026, int64(125000), "USD", "Road maintenance", "2026-06-28", "POSTED", 1)
 
 	mock.ExpectQuery(regexp.QuoteMeta("WHERE institution_id = $1 AND transaction_date >= $2 AND transaction_date <= $3 AND amount_minor >= $4 AND amount_minor <= $5")).
 		WithArgs("minfin", "2026-01-01", "2026-12-31", int64(100000), int64(200000), 25, 0).
@@ -46,7 +46,7 @@ func TestListTransactionsPaginatesWithOffsetAndReportsTotal(t *testing.T) {
 	defer func() { _ = db.Close() }()
 
 	rows := sqlmock.NewRows(transactionColumns()).
-		AddRow("txn-26", "minfin", 2026, int64(1000), "USD", "Row 26", "2026-06-01", 51)
+		AddRow("txn-26", "minfin", 2026, int64(1000), "USD", "Row 26", "2026-06-01", "POSTED", 51)
 
 	mock.ExpectQuery(regexp.QuoteMeta("LIMIT $1 OFFSET $2")).
 		WithArgs(25, 25).

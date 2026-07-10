@@ -44,8 +44,9 @@ func (repository *PostgresTransactionRepository) Save(ctx context.Context, tx Tr
 			amount_minor,
 			currency,
 			description,
-			transaction_date
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			transaction_date,
+			status
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`,
 		tx.ID,
 		tx.InstitutionID,
@@ -54,6 +55,7 @@ func (repository *PostgresTransactionRepository) Save(ctx context.Context, tx Tr
 		tx.Currency,
 		tx.Description,
 		tx.TransactionDate,
+		defaultStatus(tx.Status),
 	)
 	if err != nil {
 		return mapSaveError(tx.ID, err)
@@ -76,6 +78,14 @@ func (repository *PostgresTransactionRepository) Save(ctx context.Context, tx Tr
 	}
 
 	return dbTx.Commit()
+}
+
+// defaultStatus applies the write-path default: direct posts are POSTED.
+func defaultStatus(status string) string {
+	if status == "" {
+		return "POSTED"
+	}
+	return status
 }
 
 // mapSaveError converts constraint violations into domain errors the HTTP
@@ -113,6 +123,7 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 			currency,
 			description,
 			transaction_date::text,
+			status,
 			COUNT(*) OVER() AS total_count
 		FROM treasury_transactions
 	`
@@ -127,6 +138,11 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 	if filter.FiscalYear > 0 {
 		args = append(args, filter.FiscalYear)
 		conditions = append(conditions, fmt.Sprintf("fiscal_year = $%d", len(args)))
+	}
+
+	if filter.Status != "" {
+		args = append(args, filter.Status)
+		conditions = append(conditions, fmt.Sprintf("status = $%d", len(args)))
 	}
 
 	if filter.DateFrom != "" {
@@ -175,6 +191,7 @@ func (repository *PostgresTransactionRepository) List(ctx context.Context, filte
 			&tx.Currency,
 			&tx.Description,
 			&tx.TransactionDate,
+			&tx.Status,
 			&page.Total,
 		); err != nil {
 			return TransactionPage{}, err

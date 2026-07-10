@@ -58,3 +58,6 @@ SKILL.md
 .playwright-mcp/
 .mcp.json
 mcp.json
+
+# Local browser-automation state
+.playwright-cli/

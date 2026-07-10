@@ -21,7 +21,7 @@ func TestSaveWritesTransactionAndAuditEventAtomically(t *testing.T) {
 
 	mock.ExpectBegin()
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO treasury_transactions")).
-		WithArgs(tx.ID, tx.InstitutionID, tx.FiscalYear, tx.AmountMinor, tx.Currency, tx.Description, tx.TransactionDate).
+		WithArgs(tx.ID, tx.InstitutionID, tx.FiscalYear, tx.AmountMinor, tx.Currency, tx.Description, tx.TransactionDate, "POSTED").
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO audit_events")).
 		WithArgs("TRANSACTION_CREATED", tx.ID, tx.InstitutionID, "Transaction "+tx.ID+" was created.", "system", "req-abc-123").

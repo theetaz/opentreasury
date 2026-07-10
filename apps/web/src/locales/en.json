@@ -11,7 +11,10 @@
     "institutions": "Institutions",
     "audit": "Audit trail",
     "product": "OpenTreasury",
-    "tagline": "Public finance, in public"
+    "tagline": "Public finance, in public",
+    "reconciliation": "Reconciliation",
+    "commitments": "Commitments",
+    "insights": "Insights"
   },
   "shell": {
     "breadcrumbRoot": "Treasury",
@@ -46,5 +49,43 @@
     "title": "Page not found",
     "description": "The page you are looking for does not exist or has moved.",
     "backHome": "Back to Overview"
+  },
+  "reconciliation": {
+    "title": "Reconciliation",
+    "description": "Staged source records versus posted journal entries, per source system and month.",
+    "sourceSystem": "Source system",
+    "fiscalYear": "Fiscal year",
+    "empty": "No ingested periods match these filters."
+  },
+  "commitments": {
+    "title": "Commitments",
+    "description": "Budget obligations recorded before money moves; journal entries settle them.",
+    "institution": "Institution",
+    "fiscalYear": "Fiscal year",
+    "status": "Status",
+    "empty": "No commitments match these filters.",
+    "new": "New commitment",
+    "newDescription": "Encumber budget for a contract or purchase order. Journal entries settle it by id.",
+    "fieldId": "Commitment id",
+    "account": "Account",
+    "amount": "Amount",
+    "date": "Committed date",
+    "fieldDescription": "Description",
+    "created": "Commitment {{id}} recorded.",
+    "save": "Record commitment",
+    "saving": "Recording…"
+  },
+  "insights": {
+    "title": "Insights",
+    "description": "Flow projections and unusual amounts, computed with disclosed baseline methods.",
+    "institution": "Institution",
+    "forecastTitle": "Posted flows: history and projection",
+    "forecastDescription": "Monthly posted debit totals with a short-range projection.",
+    "actual": "Actual",
+    "projected": "Projected",
+    "noHistory": "Not enough posted history to project yet.",
+    "anomaliesTitle": "Unusual amounts",
+    "anomaliesDescription": "Amounts far outside what is typical for their account.",
+    "noAnomalies": "Nothing unusual — every amount is in line with its account's history."
   }
 }

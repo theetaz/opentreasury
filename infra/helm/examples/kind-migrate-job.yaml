@@ -1,0 +1,34 @@
+# One-shot migration Job for development clusters: applies the migrations
+# ConfigMap (created with `kubectl create configmap migrations
+# --from-file=database/migrations/`) against the dev PostgreSQL. In
+# production, run migrations as an explicit, audited step per the
+# deployment guide.
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: opentreasury-migrate
+spec:
+  backoffLimit: 3
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: migrate
+          image: migrate/migrate:v4.19.1
+          args:
+            - "-path=/migrations"
+            - "-database=$(DATABASE_DSN)"
+            - "up"
+          env:
+            - name: DATABASE_DSN
+              valueFrom:
+                secretKeyRef:
+                  name: opentreasury-database
+                  key: dsn
+          volumeMounts:
+            - name: migrations
+              mountPath: /migrations
+      volumes:
+        - name: migrations
+          configMap:
+            name: migrations

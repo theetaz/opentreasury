@@ -2,6 +2,8 @@ import { buildAuditEventsPath } from "./audit";
 import { buildTransactionsPath } from "./history";
 import { buildInstitutionsPath } from "./institutions";
 
+export type TransactionStatus = "PENDING" | "POSTED" | "REJECTED";
+
 export type TreasuryTransaction = {
   id: string;
   institutionId: string;
@@ -10,6 +12,7 @@ export type TreasuryTransaction = {
   currency: string;
   description: string;
   transactionDate: string;
+  status: TransactionStatus;
 };
 
 export type PageInfo = {
@@ -21,6 +24,7 @@ export type PageInfo = {
 export type TransactionListFilter = {
   institutionId?: string;
   fiscalYear?: number;
+  status?: string;
   dateFrom?: string;
   dateTo?: string;
   amountGte?: number;
@@ -29,6 +33,76 @@ export type TransactionListFilter = {
   pageSize?: number;
   limit?: number;
 };
+
+export type MonthlyFlow = { period: string; totalMinor: number };
+export type ForecastPoint = { period: string; projectedMinor: number; lowMinor: number; highMinor: number };
+export type ForecastResult =
+  | { ok: true; history: MonthlyFlow[]; forecast: ForecastPoint[]; method: string }
+  | { ok: false; error: string };
+
+export type Anomaly = {
+  entryId: string;
+  institutionId: string;
+  accountCode: string;
+  amountMinor: number;
+  effectiveDate: string;
+  typicalMinor: number;
+  score: number;
+};
+export type AnomaliesResult =
+  | { ok: true; anomalies: Anomaly[]; method: string; pagination: PageInfo }
+  | { ok: false; error: string };
+
+export type Commitment = {
+  id: string;
+  institutionId: string;
+  fiscalYear: number;
+  accountCode: string;
+  description: string;
+  amountMinor: number;
+  currency: string;
+  committedDate: string;
+  status: "OPEN" | "SETTLED" | "CANCELLED";
+  settledAmountMinor: number;
+  remainingAmountMinor: number;
+};
+
+export type CommitmentInput = Omit<Commitment, "status" | "settledAmountMinor" | "remainingAmountMinor">;
+
+export type CommitmentListFilter = {
+  institutionId?: string;
+  fiscalYear?: number;
+  status?: string;
+  page?: number;
+  pageSize?: number;
+};
+
+export type CommitmentListResult =
+  | { ok: true; commitments: Commitment[]; pagination: PageInfo }
+  | { ok: false; error: string };
+
+export type ReconciliationRow = {
+  sourceSystem: string;
+  period: string;
+  stagedCount: number;
+  postedCount: number;
+  quarantinedCount: number;
+  stagedAmountMinor: number;
+  postedAmountMinor: number;
+  discrepancyMinor: number;
+  status: "MATCHED" | "ATTENTION" | "DISCREPANCY";
+};
+
+export type ReconciliationListFilter = {
+  sourceSystem?: string;
+  fiscalYear?: number;
+  page?: number;
+  pageSize?: number;
+};
+
+export type ReconciliationListResult =
+  | { ok: true; rows: ReconciliationRow[]; pagination: PageInfo }
+  | { ok: false; error: string };
 
 export type AuditEventListFilter = {
   institutionId?: string;
@@ -300,7 +374,8 @@ const simulatedTransactions: TreasuryTransaction[] = [
     amountMinor: 125000,
     currency: "USD",
     description: "Road maintenance payment",
-    transactionDate: "2026-06-28"
+    transactionDate: "2026-06-28",
+    status: "POSTED",
   },
   {
     id: "txn-2026-0000",
@@ -309,7 +384,8 @@ const simulatedTransactions: TreasuryTransaction[] = [
     amountMinor: 98000,
     currency: "USD",
     description: "Bridge inspection payment",
-    transactionDate: "2026-06-27"
+    transactionDate: "2026-06-27",
+    status: "POSTED",
   },
   {
     id: "txn-2025-0942",
@@ -318,7 +394,8 @@ const simulatedTransactions: TreasuryTransaction[] = [
     amountMinor: 450000,
     currency: "USD",
     description: "Clinic equipment procurement",
-    transactionDate: "2025-12-18"
+    transactionDate: "2025-12-18",
+    status: "POSTED",
   }
 ];
 
@@ -648,6 +725,194 @@ export function buildStagingPath(filter: StagingListFilter = {}): string {
   return query ? `/v1/staging-records?${query}` : "/v1/staging-records";
 }
 
+export async function getForecast(institutionId?: string, horizon = 6): Promise<ForecastResult> {
+  if (!apiBaseUrl) {
+    const history: MonthlyFlow[] = [
+      { period: "2026-02", totalMinor: 61200000 },
+      { period: "2026-03", totalMinor: 72900000 },
+      { period: "2026-04", totalMinor: 68400000 },
+      { period: "2026-05", totalMinor: 80100000 },
+      { period: "2026-06", totalMinor: 76500000 },
+      { period: "2026-07", totalMinor: 83700000 }
+    ];
+    const mean = Math.round((80100000 + 76500000 + 83700000) / 3);
+    const forecast: ForecastPoint[] = ["2026-08", "2026-09", "2026-10"].slice(0, horizon).map((period, index) => ({
+      period,
+      projectedMinor: mean,
+      lowMinor: mean - 3000000 * Math.sqrt(index + 1),
+      highMinor: mean + 3000000 * Math.sqrt(index + 1)
+    }));
+    return { ok: true, history, forecast, method: "3-month moving average with a ±1 MAD band widening by √distance" };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (institutionId) params.set("institutionId", institutionId);
+    params.set("horizon", String(horizon));
+    const response = await fetch(`${apiBaseUrl}/v1/insights/forecast?${params}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { history: MonthlyFlow[]; forecast: ForecastPoint[]; method: string };
+    return { ok: true, ...body };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
+}
+
+export async function getAnomalies(institutionId?: string, page = 1, pageSize = 15): Promise<AnomaliesResult> {
+  if (!apiBaseUrl) {
+    const anomalies: Anomaly[] = [
+      {
+        entryId: "itmis-PAY-2026-1042", institutionId: "minfin", accountCode: "22",
+        amountMinor: 48120000, effectiveDate: "2026-07-02", typicalMinor: 1480000, score: 21.4
+      }
+    ];
+    return {
+      ok: true,
+      anomalies,
+      method: "modified z-score per account (median/MAD), threshold 3.5, minimum 5 observations",
+      pagination: { page, pageSize, total: anomalies.length }
+    };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (institutionId) params.set("institutionId", institutionId);
+    params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
+    const response = await fetch(`${apiBaseUrl}/v1/insights/anomalies?${params}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { anomalies: Anomaly[]; method: string; pagination: PageInfo };
+    return { ok: true, ...body };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
+}
+
+const simulatedCommitments: Commitment[] = [
+  {
+    id: "com-2026-0001", institutionId: "minfin", fiscalYear: 2026, accountCode: "22",
+    description: "Road maintenance framework contract", amountMinor: 50000000, currency: "USD",
+    committedDate: "2026-06-15", status: "OPEN", settledAmountMinor: 18500000, remainingAmountMinor: 31500000
+  },
+  {
+    id: "com-2026-0002", institutionId: "health", fiscalYear: 2026, accountCode: "22",
+    description: "Vaccine cold-chain equipment", amountMinor: 12000000, currency: "USD",
+    committedDate: "2026-05-02", status: "SETTLED", settledAmountMinor: 12000000, remainingAmountMinor: 0
+  }
+];
+
+export async function listCommitments(filter: CommitmentListFilter = {}): Promise<CommitmentListResult> {
+  if (!apiBaseUrl) {
+    const matches = simulatedCommitments
+      .filter((c) => !filter.institutionId || c.institutionId === filter.institutionId)
+      .filter((c) => !filter.fiscalYear || c.fiscalYear === filter.fiscalYear)
+      .filter((c) => !filter.status || c.status === filter.status);
+    const { rows, pagination } = paginate(matches, pageWindow(filter));
+    return { ok: true, commitments: rows, pagination };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (filter.institutionId) params.set("institutionId", filter.institutionId);
+    if (filter.fiscalYear) params.set("fiscalYear", String(filter.fiscalYear));
+    if (filter.status) params.set("status", filter.status);
+    params.set("page", String(filter.page ?? 1));
+    params.set("pageSize", String(filter.pageSize ?? 15));
+
+    const response = await fetch(`${apiBaseUrl}/v1/commitments?${params}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { commitments?: Commitment[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      commitments: body.commitments ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.commitments?.length ?? 0)
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
+}
+
+export async function createCommitment(input: CommitmentInput): Promise<{ ok: true } | { ok: false; error: string }> {
+  if (!apiBaseUrl) {
+    simulatedCommitments.unshift({
+      ...input,
+      status: "OPEN",
+      settledAmountMinor: 0,
+      remainingAmountMinor: input.amountMinor
+    });
+    return { ok: true };
+  }
+
+  try {
+    const response = await fetch(`${apiBaseUrl}/v1/commitments`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", ...authHeaders() },
+      body: JSON.stringify(input)
+    });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    return { ok: true };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
+}
+
+const simulatedReconciliation: ReconciliationRow[] = [
+  {
+    sourceSystem: "itmis", period: "2026-07", stagedCount: 7, postedCount: 5,
+    quarantinedCount: 1, stagedAmountMinor: 74855075, postedAmountMinor: 74855075,
+    discrepancyMinor: 0, status: "ATTENTION"
+  },
+  {
+    sourceSystem: "itmis", period: "2026-06", stagedCount: 12, postedCount: 12,
+    quarantinedCount: 0, stagedAmountMinor: 182640022, postedAmountMinor: 182640022,
+    discrepancyMinor: 0, status: "MATCHED"
+  }
+];
+
+export async function listReconciliation(filter: ReconciliationListFilter = {}): Promise<ReconciliationListResult> {
+  if (!apiBaseUrl) {
+    const matches = simulatedReconciliation
+      .filter((row) => !filter.sourceSystem || row.sourceSystem === filter.sourceSystem)
+      .filter((row) => !filter.fiscalYear || row.period.startsWith(String(filter.fiscalYear)));
+    const { rows, pagination } = paginate(matches, pageWindow(filter));
+    return { ok: true, rows, pagination };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (filter.sourceSystem) params.set("sourceSystem", filter.sourceSystem);
+    if (filter.fiscalYear) params.set("fiscalYear", String(filter.fiscalYear));
+    params.set("page", String(filter.page ?? 1));
+    params.set("pageSize", String(filter.pageSize ?? 15));
+
+    const response = await fetch(`${apiBaseUrl}/v1/reconciliation?${params}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { rows?: ReconciliationRow[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      rows: body.rows ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.rows?.length ?? 0)
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
+}
+
 export async function listStagingRecords(filter: StagingListFilter = {}): Promise<StagingListResult> {
   if (!apiBaseUrl) {
     const matches = simulatedStaging
@@ -792,6 +1057,7 @@ function simulateTransactionList(filter: TransactionListFilter): TransactionList
   const matches = simulatedTransactions
     .filter((transaction) => !filter.institutionId || transaction.institutionId === filter.institutionId)
     .filter((transaction) => !filter.fiscalYear || transaction.fiscalYear === filter.fiscalYear)
+    .filter((transaction) => !filter.status || transaction.status === filter.status)
     .filter((transaction) => !filter.dateFrom || transaction.transactionDate >= filter.dateFrom)
     .filter((transaction) => !filter.dateTo || transaction.transactionDate <= filter.dateTo)
     .filter((transaction) => !filter.amountGte || transaction.amountMinor >= filter.amountGte)

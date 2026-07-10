@@ -11,7 +11,10 @@
     "institutions": "Taasisi",
     "audit": "Rekodi ya ukaguzi",
     "product": "OpenTreasury",
-    "tagline": "Fedha za umma, hadharani"
+    "tagline": "Fedha za umma, hadharani",
+    "reconciliation": "Ulinganisho",
+    "commitments": "Ahadi za bajeti",
+    "insights": "Uchambuzi"
   },
   "shell": {
     "breadcrumbRoot": "Hazina",
@@ -46,5 +49,43 @@
     "title": "Ukurasa haukupatikana",
     "description": "Ukurasa unaoutafuta haupo au umehamishwa.",
     "backHome": "Rudi kwenye Muhtasari"
+  },
+  "reconciliation": {
+    "title": "Ulinganisho",
+    "description": "Rekodi zilizopokelewa dhidi ya maingizo yaliyowekwa kwenye jarida, kwa kila mfumo na mwezi.",
+    "sourceSystem": "Mfumo chanzo",
+    "fiscalYear": "Mwaka wa fedha",
+    "empty": "Hakuna vipindi vinavyolingana na vichujio hivi."
+  },
+  "commitments": {
+    "title": "Ahadi za bajeti",
+    "description": "Ahadi za matumizi zilizorekodiwa kabla ya fedha kutoka; maingizo ya jarida huzilipia.",
+    "institution": "Taasisi",
+    "fiscalYear": "Mwaka wa fedha",
+    "status": "Hali",
+    "empty": "Hakuna ahadi zinazolingana na vichujio hivi.",
+    "new": "Ahadi mpya",
+    "newDescription": "Tenga bajeti kwa mkataba au agizo la ununuzi. Maingizo ya jarida huilipia kwa kitambulisho chake.",
+    "fieldId": "Kitambulisho cha ahadi",
+    "account": "Akaunti",
+    "amount": "Kiasi",
+    "date": "Tarehe ya ahadi",
+    "fieldDescription": "Maelezo",
+    "created": "Ahadi {{id}} imerekodiwa.",
+    "save": "Rekodi ahadi",
+    "saving": "Inarekodi…"
+  },
+  "insights": {
+    "title": "Uchambuzi",
+    "description": "Makadirio ya mtiririko na kiasi kisicho cha kawaida, kwa mbinu za msingi zilizowekwa wazi.",
+    "institution": "Taasisi",
+    "forecastTitle": "Mtiririko uliowekwa: historia na makadirio",
+    "forecastDescription": "Jumla za mwezi zilizowekwa pamoja na makadirio ya muda mfupi.",
+    "actual": "Halisi",
+    "projected": "Makadirio",
+    "noHistory": "Historia haitoshi kufanya makadirio bado.",
+    "anomaliesTitle": "Kiasi kisicho cha kawaida",
+    "anomaliesDescription": "Kiasi kilicho mbali sana na kile cha kawaida kwa akaunti yake.",
+    "noAnomalies": "Hakuna kisicho cha kawaida — kila kiasi kinaendana na historia ya akaunti yake."
   }
 }

@@ -86,7 +86,8 @@ describe("toRecentEvent", () => {
         amountMinor: 125000,
         currency: "USD",
         description: "Road maintenance payment",
-        transactionDate: "2026-06-28"
+        transactionDate: "2026-06-28",
+        status: "POSTED",
       })
     ).toEqual({
       id: "txn-2026-0001",

@@ -35,6 +35,7 @@ type journalEntryPayload struct {
 	EffectiveDate  string               `json:"effectiveDate"`
 	Description    string               `json:"description"`
 	IdempotencyKey string               `json:"idempotencyKey,omitempty"`
+	CommitmentID   string               `json:"commitmentId,omitempty"`
 	Lines          []journalLinePayload `json:"lines"`
 }
 
@@ -55,6 +56,7 @@ func (p journalEntryPayload) toEntry() treasury.JournalEntry {
 		EffectiveDate:  p.EffectiveDate,
 		Description:    p.Description,
 		IdempotencyKey: p.IdempotencyKey,
+		CommitmentID:   p.CommitmentID,
 		Lines:          lines,
 	}
 }
@@ -139,6 +141,12 @@ func writeEntryError(response http.ResponseWriter, request *http.Request, config
 		writeError(response, http.StatusConflict, "journal entry already exists")
 	case errors.Is(err, treasury.ErrUnknownInstitution):
 		writeError(response, http.StatusUnprocessableEntity, treasury.ErrUnknownInstitution.Error())
+	case errors.Is(err, treasury.ErrCommitmentClosed):
+		writeError(response, http.StatusConflict, treasury.ErrCommitmentClosed.Error())
+	case errors.Is(err, treasury.ErrUnknownCommitment),
+		errors.Is(err, treasury.ErrCommitmentExceeded),
+		errors.Is(err, treasury.ErrCommitmentMismatch):
+		writeError(response, http.StatusUnprocessableEntity, err.Error())
 	default:
 		config.internalError(response, request, err)
 	}

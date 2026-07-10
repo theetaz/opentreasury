@@ -1,7 +1,9 @@
-# Local single-org Hyperledger Fabric network for OpenTreasury anchoring.
-# Runs on the main stack's Docker network so the ledger gateway can reach the
-# peer. TLS is disabled — this network is for local development only; a
-# production network is multi-org with TLS and HSM-backed MSPs (ADR-0004).
+# Local multi-org Hyperledger Fabric network for OpenTreasury anchoring:
+# a Raft orderer plus one peer each for the treasury (TreasuryMSP) and an
+# independent audit institution (AuditMSP). The chaincode endorsement policy
+# requires BOTH organizations to sign every anchor, so no single institution
+# can write — or rewrite — history alone. Nodes run TLS; production hardens
+# this further with CA-issued identities and HSM-backed MSPs (ADR-0004).
 #
 # Bring-up is scripted: make fabric-up (see scripts/fabric-up.sh).
 name: opentreasury-fabric
@@ -14,6 +16,7 @@ networks:
 volumes:
   orderer-data:
   peer-data:
+  peer-audit-data:
 
 services:
   orderer:
@@ -87,6 +90,42 @@ services:
       timeout: 3s
       retries: 30
 
+  peer-audit:
+    image: hyperledger/fabric-peer:2.5
+    container_name: fabric-peer-audit
+    environment:
+      FABRIC_LOGGING_SPEC: INFO
+      CORE_PEER_ID: peer0.audit.opentreasury.local
+      CORE_PEER_ADDRESS: peer0.audit.opentreasury.local:8051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:8051
+      CORE_PEER_CHAINCODEADDRESS: peer0.audit.opentreasury.local:8052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:8052
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer0.audit.opentreasury.local:8051
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer0.audit.opentreasury.local:8051
+      CORE_PEER_LOCALMSPID: AuditMSP
+      CORE_PEER_MSPCONFIGPATH: /etc/hyperledger/fabric/msp
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CERT_FILE: /etc/hyperledger/fabric/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /etc/hyperledger/fabric/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /etc/hyperledger/fabric/tls/ca.crt
+      CORE_LEDGER_STATE_STATEDATABASE: goleveldb
+    volumes:
+      - ./generated/crypto/peerOrganizations/audit.opentreasury.local/peers/peer0.audit.opentreasury.local/msp:/etc/hyperledger/fabric/msp:ro
+      - ./generated/crypto/peerOrganizations/audit.opentreasury.local/peers/peer0.audit.opentreasury.local/tls:/etc/hyperledger/fabric/tls:ro
+      - peer-audit-data:/var/hyperledger/production
+    networks:
+      default:
+        aliases:
+          - peer0.audit.opentreasury.local
+    depends_on:
+      orderer:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/8051"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
   cli:
     image: hyperledger/fabric-tools:2.5
     container_name: fabric-cli
@@ -104,6 +143,8 @@ services:
     working_dir: /work
     depends_on:
       peer:
+        condition: service_healthy
+      peer-audit:
         condition: service_healthy
 
   treasury-chaincode:

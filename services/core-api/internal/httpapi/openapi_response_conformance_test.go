@@ -36,6 +36,7 @@ func (conformanceRepository) List(context.Context, treasury.ListTransactionsFilt
 		Currency:        "USD",
 		Description:     "Road maintenance payment",
 		TransactionDate: "2026-06-28",
+		Status:          "POSTED",
 	}}}, nil
 }
 
@@ -99,6 +100,50 @@ const validTransactionJSON = `{
 	"transactionDate": "2026-06-28"
 }`
 
+func (conformanceRepository) MonthlyFlows(context.Context, string) ([]treasury.MonthlyFlow, error) {
+	return []treasury.MonthlyFlow{
+		{Period: "2026-05", TotalMinor: 100000},
+		{Period: "2026-06", TotalMinor: 120000},
+		{Period: "2026-07", TotalMinor: 110000},
+	}, nil
+}
+
+func (conformanceRepository) FlowObservations(context.Context, string) ([]treasury.FlowObservation, error) {
+	return []treasury.FlowObservation{
+		{EntryID: "n1", InstitutionID: "minfin", AccountCode: "22", AmountMinor: 100, EffectiveDate: "2026-07-01"},
+		{EntryID: "n2", InstitutionID: "minfin", AccountCode: "22", AmountMinor: 101, EffectiveDate: "2026-07-02"},
+		{EntryID: "n3", InstitutionID: "minfin", AccountCode: "22", AmountMinor: 99, EffectiveDate: "2026-07-03"},
+		{EntryID: "n4", InstitutionID: "minfin", AccountCode: "22", AmountMinor: 102, EffectiveDate: "2026-07-04"},
+		{EntryID: "n5", InstitutionID: "minfin", AccountCode: "22", AmountMinor: 100, EffectiveDate: "2026-07-05"},
+		{EntryID: "spike", InstitutionID: "minfin", AccountCode: "22", AmountMinor: 90000, EffectiveDate: "2026-07-06"},
+	}, nil
+}
+
+func (conformanceRepository) CreateCommitment(context.Context, treasury.Commitment) error {
+	return nil
+}
+
+func (conformanceRepository) ListCommitments(context.Context, treasury.ListCommitmentsFilter) (treasury.CommitmentPage, error) {
+	return treasury.CommitmentPage{Total: 1, Commitments: []treasury.Commitment{{
+		ID: "com-2026-0001", InstitutionID: "minfin", FiscalYear: 2026,
+		AccountCode: "22", Description: "Road maintenance framework contract",
+		AmountMinor: 500000, Currency: "USD", CommittedDate: "2026-07-01",
+		Status: "OPEN", SettledAmountMinor: 200000,
+	}}}, nil
+}
+
+func (conformanceRepository) ListReconciliation(context.Context, treasury.ListReconciliationFilter) (treasury.ReconciliationPage, error) {
+	return treasury.ReconciliationPage{Total: 1, Rows: []treasury.ReconciliationRow{{
+		SourceSystem:      "itmis",
+		Period:            "2026-07",
+		StagedCount:       6,
+		PostedCount:       5,
+		QuarantinedCount:  1,
+		StagedAmountMinor: 500000,
+		PostedAmountMinor: 500000,
+	}}}, nil
+}
+
 func TestResponsesConformToOpenAPIContract(t *testing.T) {
 	contractPath := filepath.Join("..", "..", "..", "..", "api", "core-api", "openapi.yaml")
 	loader := openapi3.NewLoader()
@@ -127,6 +172,12 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 		{name: "list accounts bad type", method: http.MethodGet, path: "/v1/accounts?accountType=CRYPTO", wantStatus: http.StatusBadRequest},
 		{name: "list journal entries", method: http.MethodGet, path: "/v1/journal-entries", wantStatus: http.StatusOK},
 		{name: "list balances", method: http.MethodGet, path: "/v1/balances?institutionId=minfin", wantStatus: http.StatusOK},
+		{name: "reconciliation", method: http.MethodGet, path: "/v1/reconciliation?sourceSystem=itmis&fiscalYear=2026", wantStatus: http.StatusOK},
+		{name: "create commitment", method: http.MethodPost, path: "/v1/commitments", body: validCommitmentJSON, wantStatus: http.StatusCreated},
+		{name: "list commitments", method: http.MethodGet, path: "/v1/commitments?status=OPEN", wantStatus: http.StatusOK},
+		{name: "insights forecast", method: http.MethodGet, path: "/v1/insights/forecast?horizon=3", wantStatus: http.StatusOK},
+		{name: "insights anomalies", method: http.MethodGet, path: "/v1/insights/anomalies", wantStatus: http.StatusOK},
+		{name: "reconciliation bad year", method: http.MethodGet, path: "/v1/reconciliation?fiscalYear=zero", wantStatus: http.StatusBadRequest},
 		{name: "validate ok", method: http.MethodPost, path: "/v1/transactions/validate", body: validTransactionJSON, wantStatus: http.StatusOK},
 		{name: "validate rejects", method: http.MethodPost, path: "/v1/transactions/validate", body: `{"id":""}`, wantStatus: http.StatusBadRequest},
 		{name: "create ok", method: http.MethodPost, path: "/v1/transactions", body: validTransactionJSON, wantStatus: http.StatusCreated},
@@ -147,6 +198,9 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 				WithInstitutionRepository(testCase.repository),
 				WithAccountRepository(testCase.repository),
 				WithJournalRepository(testCase.repository),
+				WithReconciliationRepository(testCase.repository),
+				WithCommitmentRepository(testCase.repository),
+				WithInsightsRepository(testCase.repository),
 			)
 
 			var body io.Reader

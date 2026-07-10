@@ -36,22 +36,25 @@ type InstitutionRepository interface {
 type RouterOption func(*routerConfig)
 
 type routerConfig struct {
-	transactionRepository TransactionRepository
-	auditEventRepository  AuditEventRepository
-	institutionRepository InstitutionRepository
-	accountRepository     AccountRepository
-	journalRepository     JournalRepository
-	stagingRepository     StagingRepository
-	anchorRepository      AnchorRepository
-	tokenVerifier         auth.TokenVerifier
-	authorizer            Authorizer
-	publication           *authz.Publication
-	publicRateRPS         float64
-	publicRateBurst       int
-	allowedOrigins        map[string]struct{}
-	logger                *slog.Logger
-	readinessChecks       []func(context.Context) error
-	maxBodyBytes          int64
+	transactionRepository    TransactionRepository
+	auditEventRepository     AuditEventRepository
+	institutionRepository    InstitutionRepository
+	accountRepository        AccountRepository
+	journalRepository        JournalRepository
+	stagingRepository        StagingRepository
+	anchorRepository         AnchorRepository
+	reconciliationRepository ReconciliationRepository
+	commitmentRepository     CommitmentRepository
+	insightsRepository       InsightsRepository
+	tokenVerifier            auth.TokenVerifier
+	authorizer               Authorizer
+	publication              *authz.Publication
+	publicRateRPS            float64
+	publicRateBurst          int
+	allowedOrigins           map[string]struct{}
+	logger                   *slog.Logger
+	readinessChecks          []func(context.Context) error
+	maxBodyBytes             int64
 }
 
 func WithTransactionRepository(repository TransactionRepository) RouterOption {
@@ -154,6 +157,11 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
 	mux.HandleFunc("POST /v1/staging-records", config.submitStagingRecords)
 	mux.HandleFunc("GET /v1/staging-records", config.listStagingRecords)
+	mux.HandleFunc("GET /v1/reconciliation", config.listReconciliation)
+	mux.HandleFunc("POST /v1/commitments", config.createCommitment)
+	mux.HandleFunc("GET /v1/commitments", config.listCommitments)
+	mux.HandleFunc("GET /v1/insights/forecast", config.forecastInsights)
+	mux.HandleFunc("GET /v1/insights/anomalies", config.anomalyInsights)
 	config.registerPublicRoutes(mux)
 
 	var handler http.Handler = mux
@@ -472,6 +480,7 @@ type transactionResponse struct {
 	Currency        string `json:"currency"`
 	Description     string `json:"description"`
 	TransactionDate string `json:"transactionDate"`
+	Status          string `json:"status"`
 }
 
 type auditEventResponse struct {
@@ -590,6 +599,13 @@ func parseListTransactionsFilter(request *http.Request) (treasury.ListTransactio
 		InstitutionID: query.Get("institutionId"),
 	}
 
+	if status := query.Get("status"); status != "" {
+		if _, ok := treasury.ValidTransactionStatuses[status]; !ok {
+			return treasury.ListTransactionsFilter{}, treasury.ErrInvalidStatus
+		}
+		filter.Status = status
+	}
+
 	if fiscalYear := query.Get("fiscalYear"); fiscalYear != "" {
 		value, err := strconv.Atoi(fiscalYear)
 		if err != nil || value <= 0 {
@@ -671,6 +687,7 @@ func toTransactionResponses(transactions []treasury.Transaction) []transactionRe
 			Currency:        tx.Currency,
 			Description:     tx.Description,
 			TransactionDate: tx.TransactionDate,
+			Status:          tx.Status,
 		})
 	}
 

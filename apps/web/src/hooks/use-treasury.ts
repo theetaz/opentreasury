@@ -6,7 +6,12 @@ import {
   listAuditEvents,
   listBalances,
   listInstitutions,
+  createCommitment,
+  getAnomalies,
+  getForecast,
+  listCommitments,
   listJournalEntries,
+  listReconciliation,
   listStagingRecords,
   listTransactions,
   postJournalEntry,
@@ -16,7 +21,10 @@ import {
   type BalanceListFilter,
   type InstitutionListFilter,
   type JournalEntryInput,
+  type CommitmentInput,
+  type CommitmentListFilter,
   type JournalEntryListFilter,
+  type ReconciliationListFilter,
   type StagingListFilter,
   type TransactionListFilter,
   type TreasuryTransaction
@@ -47,6 +55,44 @@ export function useStagingRecords(filter: StagingListFilter) {
   return useQuery({
     queryKey: ["staging-records", filter],
     queryFn: () => listStagingRecords(filter)
+  });
+}
+
+export function useForecast(institutionId?: string, horizon = 6) {
+  return useQuery({
+    queryKey: ["insights-forecast", institutionId, horizon],
+    queryFn: () => getForecast(institutionId, horizon)
+  });
+}
+
+export function useAnomalies(institutionId: string | undefined, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: ["insights-anomalies", institutionId, page, pageSize],
+    queryFn: () => getAnomalies(institutionId, page, pageSize)
+  });
+}
+
+export function useCommitments(filter: CommitmentListFilter) {
+  return useQuery({
+    queryKey: ["commitments", filter],
+    queryFn: () => listCommitments(filter)
+  });
+}
+
+export function useCreateCommitment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CommitmentInput) => createCommitment(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["commitments"] });
+    }
+  });
+}
+
+export function useReconciliation(filter: ReconciliationListFilter) {
+  return useQuery({
+    queryKey: ["reconciliation", filter],
+    queryFn: () => listReconciliation(filter)
   });
 }
 

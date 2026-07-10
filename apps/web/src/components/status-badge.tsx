@@ -8,6 +8,10 @@ const toneByStatus: Record<string, string> = {
   VALIDATED: "bg-info/12 text-info",
   PENDING: "bg-warning/14 text-warning",
   QUARANTINED: "bg-destructive/12 text-destructive",
+  MATCHED: "bg-success/12 text-success",
+  ATTENTION: "bg-warning/14 text-warning",
+  DISCREPANCY: "bg-destructive/12 text-destructive",
+  REJECTED: "bg-destructive/12 text-destructive",
   INACTIVE: "bg-muted text-muted-foreground",
   REVERSED: "bg-muted text-muted-foreground"
 };

@@ -26,6 +26,10 @@ export function buildTransactionsPath(filter: TransactionListFilter = {}): strin
     params.set("fiscalYear", String(filter.fiscalYear));
   }
 
+  if (filter.status) {
+    params.set("status", filter.status);
+  }
+
   if (filter.dateFrom) {
     params.set("dateFrom", filter.dateFrom);
   }

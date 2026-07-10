@@ -24,8 +24,9 @@ func TestPostgresTransactionRepository_Save(t *testing.T) {
 			amount_minor,
 			currency,
 			description,
-			transaction_date
-		) VALUES ($1, $2, $3, $4, $5, $6, $7)
+			transaction_date,
+			status
+		) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 	`)).
 		WithArgs(
 			tx.ID,
@@ -35,6 +36,7 @@ func TestPostgresTransactionRepository_Save(t *testing.T) {
 			tx.Currency,
 			tx.Description,
 			tx.TransactionDate,
+			"POSTED",
 		).
 		WillReturnResult(sqlmock.NewResult(0, 1))
 	mock.ExpectExec(regexp.QuoteMeta("INSERT INTO audit_events")).
@@ -64,8 +66,8 @@ func TestPostgresTransactionRepository_ListReturnsFilteredTransactions(t *testin
 	repository := NewPostgresTransactionRepository(db)
 
 	rows := sqlmock.NewRows(transactionColumns()).
-		AddRow("txn-2026-0002", "minfin", 2026, int64(450075), "USD", "Quarterly grant release", "2026-06-29", 2).
-		AddRow("txn-2026-0001", "minfin", 2026, int64(125000), "USD", "Road maintenance payment", "2026-06-28", 2)
+		AddRow("txn-2026-0002", "minfin", 2026, int64(450075), "USD", "Quarterly grant release", "2026-06-29", "POSTED", 2).
+		AddRow("txn-2026-0001", "minfin", 2026, int64(125000), "USD", "Road maintenance payment", "2026-06-28", "POSTED", 2)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT
@@ -76,6 +78,7 @@ func TestPostgresTransactionRepository_ListReturnsFilteredTransactions(t *testin
 			currency,
 			description,
 			transaction_date::text,
+			status,
 			COUNT(*) OVER() AS total_count
 		FROM treasury_transactions
 		WHERE institution_id = $1 AND fiscal_year = $2
@@ -104,7 +107,7 @@ func TestPostgresTransactionRepository_ListReturnsRecentTransactions(t *testing.
 	repository := NewPostgresTransactionRepository(db)
 
 	rows := sqlmock.NewRows(transactionColumns()).
-		AddRow("txn-2026-0002", "minfin", 2026, int64(450075), "USD", "Quarterly grant release", "2026-06-29", 1)
+		AddRow("txn-2026-0002", "minfin", 2026, int64(450075), "USD", "Quarterly grant release", "2026-06-29", "POSTED", 1)
 
 	mock.ExpectQuery(regexp.QuoteMeta(`
 		SELECT
@@ -115,6 +118,7 @@ func TestPostgresTransactionRepository_ListReturnsRecentTransactions(t *testing.
 			currency,
 			description,
 			transaction_date::text,
+			status,
 			COUNT(*) OVER() AS total_count
 		FROM treasury_transactions
 		ORDER BY transaction_date DESC, created_at DESC, id DESC
