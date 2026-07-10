@@ -6,6 +6,8 @@ import {
   listAuditEvents,
   listBalances,
   listInstitutions,
+  createCommitment,
+  listCommitments,
   listJournalEntries,
   listReconciliation,
   listStagingRecords,
@@ -17,6 +19,8 @@ import {
   type BalanceListFilter,
   type InstitutionListFilter,
   type JournalEntryInput,
+  type CommitmentInput,
+  type CommitmentListFilter,
   type JournalEntryListFilter,
   type ReconciliationListFilter,
   type StagingListFilter,
@@ -49,6 +53,23 @@ export function useStagingRecords(filter: StagingListFilter) {
   return useQuery({
     queryKey: ["staging-records", filter],
     queryFn: () => listStagingRecords(filter)
+  });
+}
+
+export function useCommitments(filter: CommitmentListFilter) {
+  return useQuery({
+    queryKey: ["commitments", filter],
+    queryFn: () => listCommitments(filter)
+  });
+}
+
+export function useCreateCommitment() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CommitmentInput) => createCommitment(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["commitments"] });
+    }
   });
 }
 

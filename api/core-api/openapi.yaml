@@ -376,6 +376,93 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/commitments:
+    post:
+      operationId: createCommitment
+      summary: Record a budget commitment
+      description: >-
+        Encumbers budget before money moves — a signed contract or purchase
+        order. Journal entries settle it by referencing its id; settlements
+        may never exceed the committed amount.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/CommitmentInput"
+      responses:
+        "201":
+          description: Commitment recorded.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [id]
+                properties:
+                  id:
+                    type: string
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: A commitment with this id already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "422":
+          description: The referenced institution does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "503":
+          description: Commitment persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    get:
+      operationId: listCommitments
+      summary: List budget commitments with settled totals
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Filter by institution identifier.
+        - name: fiscalYear
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Filter by fiscal year.
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum: [OPEN, SETTLED, CANCELLED]
+          description: Filter by commitment status.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Commitments for the selected filters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListCommitmentsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Commitment persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/reconciliation:
     get:
       operationId: listReconciliation
@@ -657,6 +744,80 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    CommitmentInput:
+      type: object
+      required:
+        - id
+        - institutionId
+        - fiscalYear
+        - accountCode
+        - amountMinor
+        - currency
+        - committedDate
+      properties:
+        id:
+          type: string
+          minLength: 1
+          example: com-2026-0001
+        institutionId:
+          type: string
+          minLength: 1
+          example: minfin
+        fiscalYear:
+          type: integer
+          minimum: 1
+          example: 2026
+        accountCode:
+          type: string
+          minLength: 1
+          example: "22"
+        description:
+          type: string
+          example: Road maintenance framework contract
+        amountMinor:
+          type: integer
+          format: int64
+          minimum: 1
+          example: 500000
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          example: USD
+        committedDate:
+          type: string
+          format: date
+          example: "2026-07-01"
+    Commitment:
+      allOf:
+        - $ref: "#/components/schemas/CommitmentInput"
+        - type: object
+          required:
+            - status
+            - settledAmountMinor
+            - remainingAmountMinor
+          properties:
+            status:
+              type: string
+              enum: [OPEN, SETTLED, CANCELLED]
+            settledAmountMinor:
+              type: integer
+              format: int64
+              minimum: 0
+            remainingAmountMinor:
+              type: integer
+              format: int64
+    ListCommitmentsResponse:
+      type: object
+      required:
+        - commitments
+        - pagination
+      properties:
+        commitments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Commitment"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     ReconciliationRow:
       type: object
       required:
@@ -889,6 +1050,9 @@ components:
         effectiveDate: { type: string, format: date }
         description: { type: string }
         idempotencyKey: { type: string }
+        commitmentId:
+          type: string
+          description: Optional commitment this entry settles (in the same transaction).
         lines:
           type: array
           minItems: 2

@@ -12,7 +12,8 @@
     "audit": "Rekodi ya ukaguzi",
     "product": "OpenTreasury",
     "tagline": "Fedha za umma, hadharani",
-    "reconciliation": "Ulinganisho"
+    "reconciliation": "Ulinganisho",
+    "commitments": "Ahadi za bajeti"
   },
   "shell": {
     "breadcrumbRoot": "Hazina",
@@ -54,5 +55,23 @@
     "sourceSystem": "Mfumo chanzo",
     "fiscalYear": "Mwaka wa fedha",
     "empty": "Hakuna vipindi vinavyolingana na vichujio hivi."
+  },
+  "commitments": {
+    "title": "Ahadi za bajeti",
+    "description": "Ahadi za matumizi zilizorekodiwa kabla ya fedha kutoka; maingizo ya jarida huzilipia.",
+    "institution": "Taasisi",
+    "fiscalYear": "Mwaka wa fedha",
+    "status": "Hali",
+    "empty": "Hakuna ahadi zinazolingana na vichujio hivi.",
+    "new": "Ahadi mpya",
+    "newDescription": "Tenga bajeti kwa mkataba au agizo la ununuzi. Maingizo ya jarida huilipia kwa kitambulisho chake.",
+    "fieldId": "Kitambulisho cha ahadi",
+    "account": "Akaunti",
+    "amount": "Kiasi",
+    "date": "Tarehe ya ahadi",
+    "fieldDescription": "Maelezo",
+    "created": "Ahadi {{id}} imerekodiwa.",
+    "save": "Rekodi ahadi",
+    "saving": "Inarekodi…"
   }
 }

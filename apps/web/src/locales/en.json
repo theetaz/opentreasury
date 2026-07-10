@@ -12,7 +12,8 @@
     "audit": "Audit trail",
     "product": "OpenTreasury",
     "tagline": "Public finance, in public",
-    "reconciliation": "Reconciliation"
+    "reconciliation": "Reconciliation",
+    "commitments": "Commitments"
   },
   "shell": {
     "breadcrumbRoot": "Treasury",
@@ -54,5 +55,23 @@
     "sourceSystem": "Source system",
     "fiscalYear": "Fiscal year",
     "empty": "No ingested periods match these filters."
+  },
+  "commitments": {
+    "title": "Commitments",
+    "description": "Budget obligations recorded before money moves; journal entries settle them.",
+    "institution": "Institution",
+    "fiscalYear": "Fiscal year",
+    "status": "Status",
+    "empty": "No commitments match these filters.",
+    "new": "New commitment",
+    "newDescription": "Encumber budget for a contract or purchase order. Journal entries settle it by id.",
+    "fieldId": "Commitment id",
+    "account": "Account",
+    "amount": "Amount",
+    "date": "Committed date",
+    "fieldDescription": "Description",
+    "created": "Commitment {{id}} recorded.",
+    "save": "Record commitment",
+    "saving": "Recording…"
   }
 }

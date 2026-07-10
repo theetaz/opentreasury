@@ -100,6 +100,19 @@ const validTransactionJSON = `{
 	"transactionDate": "2026-06-28"
 }`
 
+func (conformanceRepository) CreateCommitment(context.Context, treasury.Commitment) error {
+	return nil
+}
+
+func (conformanceRepository) ListCommitments(context.Context, treasury.ListCommitmentsFilter) (treasury.CommitmentPage, error) {
+	return treasury.CommitmentPage{Total: 1, Commitments: []treasury.Commitment{{
+		ID: "com-2026-0001", InstitutionID: "minfin", FiscalYear: 2026,
+		AccountCode: "22", Description: "Road maintenance framework contract",
+		AmountMinor: 500000, Currency: "USD", CommittedDate: "2026-07-01",
+		Status: "OPEN", SettledAmountMinor: 200000,
+	}}}, nil
+}
+
 func (conformanceRepository) ListReconciliation(context.Context, treasury.ListReconciliationFilter) (treasury.ReconciliationPage, error) {
 	return treasury.ReconciliationPage{Total: 1, Rows: []treasury.ReconciliationRow{{
 		SourceSystem:      "itmis",
@@ -141,6 +154,8 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 		{name: "list journal entries", method: http.MethodGet, path: "/v1/journal-entries", wantStatus: http.StatusOK},
 		{name: "list balances", method: http.MethodGet, path: "/v1/balances?institutionId=minfin", wantStatus: http.StatusOK},
 		{name: "reconciliation", method: http.MethodGet, path: "/v1/reconciliation?sourceSystem=itmis&fiscalYear=2026", wantStatus: http.StatusOK},
+		{name: "create commitment", method: http.MethodPost, path: "/v1/commitments", body: validCommitmentJSON, wantStatus: http.StatusCreated},
+		{name: "list commitments", method: http.MethodGet, path: "/v1/commitments?status=OPEN", wantStatus: http.StatusOK},
 		{name: "reconciliation bad year", method: http.MethodGet, path: "/v1/reconciliation?fiscalYear=zero", wantStatus: http.StatusBadRequest},
 		{name: "validate ok", method: http.MethodPost, path: "/v1/transactions/validate", body: validTransactionJSON, wantStatus: http.StatusOK},
 		{name: "validate rejects", method: http.MethodPost, path: "/v1/transactions/validate", body: `{"id":""}`, wantStatus: http.StatusBadRequest},
@@ -163,6 +178,7 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 				WithAccountRepository(testCase.repository),
 				WithJournalRepository(testCase.repository),
 				WithReconciliationRepository(testCase.repository),
+				WithCommitmentRepository(testCase.repository),
 			)
 
 			var body io.Reader

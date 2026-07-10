@@ -38,6 +38,7 @@ type JournalEntry struct {
 	EntryType       string // STANDARD or REVERSAL
 	ReversesEntryID string
 	IdempotencyKey  string
+	CommitmentID    string
 	Lines           []JournalLine
 }
 
