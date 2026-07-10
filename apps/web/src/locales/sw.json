@@ -13,7 +13,8 @@
     "product": "OpenTreasury",
     "tagline": "Fedha za umma, hadharani",
     "reconciliation": "Ulinganisho",
-    "commitments": "Ahadi za bajeti"
+    "commitments": "Ahadi za bajeti",
+    "insights": "Uchambuzi"
   },
   "shell": {
     "breadcrumbRoot": "Hazina",
@@ -73,5 +74,18 @@
     "created": "Ahadi {{id}} imerekodiwa.",
     "save": "Rekodi ahadi",
     "saving": "Inarekodi…"
+  },
+  "insights": {
+    "title": "Uchambuzi",
+    "description": "Makadirio ya mtiririko na kiasi kisicho cha kawaida, kwa mbinu za msingi zilizowekwa wazi.",
+    "institution": "Taasisi",
+    "forecastTitle": "Mtiririko uliowekwa: historia na makadirio",
+    "forecastDescription": "Jumla za mwezi zilizowekwa pamoja na makadirio ya muda mfupi.",
+    "actual": "Halisi",
+    "projected": "Makadirio",
+    "noHistory": "Historia haitoshi kufanya makadirio bado.",
+    "anomaliesTitle": "Kiasi kisicho cha kawaida",
+    "anomaliesDescription": "Kiasi kilicho mbali sana na kile cha kawaida kwa akaunti yake.",
+    "noAnomalies": "Hakuna kisicho cha kawaida — kila kiasi kinaendana na historia ya akaunti yake."
   }
 }

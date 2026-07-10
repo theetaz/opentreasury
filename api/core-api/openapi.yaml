@@ -463,6 +463,77 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/insights/forecast:
+    get:
+      operationId: forecastInsights
+      summary: Project monthly posted flows
+      description: >-
+        History of monthly posted debit totals plus a projection using a
+        disclosed baseline method (3-month moving average with a ±1 MAD band).
+        The method travels with the numbers.
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+        - name: horizon
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 12
+            default: 3
+          description: Months to project.
+      responses:
+        "200":
+          description: Flow history and projection.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ForecastResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Insights persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/insights/anomalies:
+    get:
+      operationId: anomalyInsights
+      summary: Flag statistically unusual posted amounts
+      description: >-
+        Posted debit lines whose amount is far outside what is typical for
+        their account, scored with a disclosed robust method (modified
+        z-score via median/MAD, threshold 3.5).
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Anomalies ordered by score, highest first.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AnomaliesResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Insights persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/reconciliation:
     get:
       operationId: listReconciliation
@@ -744,6 +815,81 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    MonthlyFlow:
+      type: object
+      required: [period, totalMinor]
+      properties:
+        period:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+        totalMinor:
+          type: integer
+          format: int64
+    ForecastPoint:
+      type: object
+      required: [period, projectedMinor, lowMinor, highMinor]
+      properties:
+        period:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+        projectedMinor:
+          type: integer
+          format: int64
+        lowMinor:
+          type: integer
+          format: int64
+        highMinor:
+          type: integer
+          format: int64
+    ForecastResponse:
+      type: object
+      required: [history, forecast, method]
+      properties:
+        history:
+          type: array
+          items:
+            $ref: "#/components/schemas/MonthlyFlow"
+        forecast:
+          type: array
+          items:
+            $ref: "#/components/schemas/ForecastPoint"
+        method:
+          type: string
+          description: How the projection was computed — disclosed with the numbers.
+    Anomaly:
+      type: object
+      required: [entryId, institutionId, accountCode, amountMinor, effectiveDate, typicalMinor, score]
+      properties:
+        entryId:
+          type: string
+        institutionId:
+          type: string
+        accountCode:
+          type: string
+        amountMinor:
+          type: integer
+          format: int64
+        effectiveDate:
+          type: string
+        typicalMinor:
+          type: integer
+          format: int64
+          description: The account's median amount, the reference point.
+        score:
+          type: number
+          description: Modified z-score; flagged when above 3.5.
+    AnomaliesResponse:
+      type: object
+      required: [anomalies, method, pagination]
+      properties:
+        anomalies:
+          type: array
+          items:
+            $ref: "#/components/schemas/Anomaly"
+        method:
+          type: string
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     CommitmentInput:
       type: object
       required:

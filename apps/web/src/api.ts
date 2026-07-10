@@ -34,6 +34,25 @@ export type TransactionListFilter = {
   limit?: number;
 };
 
+export type MonthlyFlow = { period: string; totalMinor: number };
+export type ForecastPoint = { period: string; projectedMinor: number; lowMinor: number; highMinor: number };
+export type ForecastResult =
+  | { ok: true; history: MonthlyFlow[]; forecast: ForecastPoint[]; method: string }
+  | { ok: false; error: string };
+
+export type Anomaly = {
+  entryId: string;
+  institutionId: string;
+  accountCode: string;
+  amountMinor: number;
+  effectiveDate: string;
+  typicalMinor: number;
+  score: number;
+};
+export type AnomaliesResult =
+  | { ok: true; anomalies: Anomaly[]; method: string; pagination: PageInfo }
+  | { ok: false; error: string };
+
 export type Commitment = {
   id: string;
   institutionId: string;
@@ -704,6 +723,75 @@ export function buildStagingPath(filter: StagingListFilter = {}): string {
   if (filter.pageSize) params.set("pageSize", String(filter.pageSize));
   const query = params.toString();
   return query ? `/v1/staging-records?${query}` : "/v1/staging-records";
+}
+
+export async function getForecast(institutionId?: string, horizon = 6): Promise<ForecastResult> {
+  if (!apiBaseUrl) {
+    const history: MonthlyFlow[] = [
+      { period: "2026-02", totalMinor: 61200000 },
+      { period: "2026-03", totalMinor: 72900000 },
+      { period: "2026-04", totalMinor: 68400000 },
+      { period: "2026-05", totalMinor: 80100000 },
+      { period: "2026-06", totalMinor: 76500000 },
+      { period: "2026-07", totalMinor: 83700000 }
+    ];
+    const mean = Math.round((80100000 + 76500000 + 83700000) / 3);
+    const forecast: ForecastPoint[] = ["2026-08", "2026-09", "2026-10"].slice(0, horizon).map((period, index) => ({
+      period,
+      projectedMinor: mean,
+      lowMinor: mean - 3000000 * Math.sqrt(index + 1),
+      highMinor: mean + 3000000 * Math.sqrt(index + 1)
+    }));
+    return { ok: true, history, forecast, method: "3-month moving average with a ±1 MAD band widening by √distance" };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (institutionId) params.set("institutionId", institutionId);
+    params.set("horizon", String(horizon));
+    const response = await fetch(`${apiBaseUrl}/v1/insights/forecast?${params}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { history: MonthlyFlow[]; forecast: ForecastPoint[]; method: string };
+    return { ok: true, ...body };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
+}
+
+export async function getAnomalies(institutionId?: string, page = 1, pageSize = 15): Promise<AnomaliesResult> {
+  if (!apiBaseUrl) {
+    const anomalies: Anomaly[] = [
+      {
+        entryId: "itmis-PAY-2026-1042", institutionId: "minfin", accountCode: "22",
+        amountMinor: 48120000, effectiveDate: "2026-07-02", typicalMinor: 1480000, score: 21.4
+      }
+    ];
+    return {
+      ok: true,
+      anomalies,
+      method: "modified z-score per account (median/MAD), threshold 3.5, minimum 5 observations",
+      pagination: { page, pageSize, total: anomalies.length }
+    };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (institutionId) params.set("institutionId", institutionId);
+    params.set("page", String(page));
+    params.set("pageSize", String(pageSize));
+    const response = await fetch(`${apiBaseUrl}/v1/insights/anomalies?${params}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { anomalies: Anomaly[]; method: string; pagination: PageInfo };
+    return { ok: true, ...body };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
 }
 
 const simulatedCommitments: Commitment[] = [
