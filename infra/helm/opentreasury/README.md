@@ -62,3 +62,32 @@ against these metrics.
 helm lint infra/helm/opentreasury
 helm template opentreasury infra/helm/opentreasury
 ```
+
+## Trying it on a real cluster (kind)
+
+The `examples/` directory holds everything needed to replicate a
+production-shaped deployment on a laptop:
+
+```sh
+kind create cluster --name opentreasury
+
+# Local images (or let the cluster pull the signed release images)
+kind load docker-image --name opentreasury \
+  ghcr.io/theetaz/opentreasury/core-api:0.1.0 \
+  ghcr.io/theetaz/opentreasury/web:0.1.0 \
+  ghcr.io/theetaz/opentreasury/ledger-gateway:0.1.0 \
+  ghcr.io/theetaz/opentreasury/mcp-server:0.1.0
+
+# Dev database + migrations (production uses a managed DB and an audited
+# migration step instead)
+kubectl apply -f infra/helm/examples/kind-postgres.yaml
+kubectl create configmap migrations --from-file=database/migrations/
+kubectl apply -f infra/helm/examples/kind-migrate-job.yaml
+kubectl wait --for=condition=complete job/opentreasury-migrate
+
+helm install opentreasury infra/helm/opentreasury \
+  --set database.existingSecret=opentreasury-database
+
+kubectl port-forward svc/opentreasury-core-api 18080:8080 &
+curl http://localhost:18080/readyz   # {"status":"ready"}
+```
