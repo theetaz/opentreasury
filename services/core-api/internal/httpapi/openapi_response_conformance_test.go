@@ -100,6 +100,18 @@ const validTransactionJSON = `{
 	"transactionDate": "2026-06-28"
 }`
 
+func (conformanceRepository) ListReconciliation(context.Context, treasury.ListReconciliationFilter) (treasury.ReconciliationPage, error) {
+	return treasury.ReconciliationPage{Total: 1, Rows: []treasury.ReconciliationRow{{
+		SourceSystem:      "itmis",
+		Period:            "2026-07",
+		StagedCount:       6,
+		PostedCount:       5,
+		QuarantinedCount:  1,
+		StagedAmountMinor: 500000,
+		PostedAmountMinor: 500000,
+	}}}, nil
+}
+
 func TestResponsesConformToOpenAPIContract(t *testing.T) {
 	contractPath := filepath.Join("..", "..", "..", "..", "api", "core-api", "openapi.yaml")
 	loader := openapi3.NewLoader()
@@ -128,6 +140,8 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 		{name: "list accounts bad type", method: http.MethodGet, path: "/v1/accounts?accountType=CRYPTO", wantStatus: http.StatusBadRequest},
 		{name: "list journal entries", method: http.MethodGet, path: "/v1/journal-entries", wantStatus: http.StatusOK},
 		{name: "list balances", method: http.MethodGet, path: "/v1/balances?institutionId=minfin", wantStatus: http.StatusOK},
+		{name: "reconciliation", method: http.MethodGet, path: "/v1/reconciliation?sourceSystem=itmis&fiscalYear=2026", wantStatus: http.StatusOK},
+		{name: "reconciliation bad year", method: http.MethodGet, path: "/v1/reconciliation?fiscalYear=zero", wantStatus: http.StatusBadRequest},
 		{name: "validate ok", method: http.MethodPost, path: "/v1/transactions/validate", body: validTransactionJSON, wantStatus: http.StatusOK},
 		{name: "validate rejects", method: http.MethodPost, path: "/v1/transactions/validate", body: `{"id":""}`, wantStatus: http.StatusBadRequest},
 		{name: "create ok", method: http.MethodPost, path: "/v1/transactions", body: validTransactionJSON, wantStatus: http.StatusCreated},
@@ -148,6 +162,7 @@ func TestResponsesConformToOpenAPIContract(t *testing.T) {
 				WithInstitutionRepository(testCase.repository),
 				WithAccountRepository(testCase.repository),
 				WithJournalRepository(testCase.repository),
+				WithReconciliationRepository(testCase.repository),
 			)
 
 			var body io.Reader

@@ -127,6 +127,7 @@ func newServer(ctx context.Context, cfg config, db *sql.DB, logger *slog.Logger)
 			httpapi.WithJournalRepository(treasury.NewPostgresJournalRepository(db)),
 			httpapi.WithStagingRepository(treasury.NewPostgresStagingRepository(db, treasury.NewPostgresJournalRepository(db))),
 			httpapi.WithAnchorRepository(treasury.NewPostgresAnchorRepository(db)),
+			httpapi.WithReconciliationRepository(treasury.NewPostgresReconciliationRepository(db)),
 			httpapi.WithReadinessCheck(db.PingContext),
 		)
 

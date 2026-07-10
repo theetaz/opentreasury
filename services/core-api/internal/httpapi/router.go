@@ -36,22 +36,23 @@ type InstitutionRepository interface {
 type RouterOption func(*routerConfig)
 
 type routerConfig struct {
-	transactionRepository TransactionRepository
-	auditEventRepository  AuditEventRepository
-	institutionRepository InstitutionRepository
-	accountRepository     AccountRepository
-	journalRepository     JournalRepository
-	stagingRepository     StagingRepository
-	anchorRepository      AnchorRepository
-	tokenVerifier         auth.TokenVerifier
-	authorizer            Authorizer
-	publication           *authz.Publication
-	publicRateRPS         float64
-	publicRateBurst       int
-	allowedOrigins        map[string]struct{}
-	logger                *slog.Logger
-	readinessChecks       []func(context.Context) error
-	maxBodyBytes          int64
+	transactionRepository    TransactionRepository
+	auditEventRepository     AuditEventRepository
+	institutionRepository    InstitutionRepository
+	accountRepository        AccountRepository
+	journalRepository        JournalRepository
+	stagingRepository        StagingRepository
+	anchorRepository         AnchorRepository
+	reconciliationRepository ReconciliationRepository
+	tokenVerifier            auth.TokenVerifier
+	authorizer               Authorizer
+	publication              *authz.Publication
+	publicRateRPS            float64
+	publicRateBurst          int
+	allowedOrigins           map[string]struct{}
+	logger                   *slog.Logger
+	readinessChecks          []func(context.Context) error
+	maxBodyBytes             int64
 }
 
 func WithTransactionRepository(repository TransactionRepository) RouterOption {
@@ -154,6 +155,7 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("POST /v1/transactions/validate", validateTransaction)
 	mux.HandleFunc("POST /v1/staging-records", config.submitStagingRecords)
 	mux.HandleFunc("GET /v1/staging-records", config.listStagingRecords)
+	mux.HandleFunc("GET /v1/reconciliation", config.listReconciliation)
 	config.registerPublicRoutes(mux)
 
 	var handler http.Handler = mux

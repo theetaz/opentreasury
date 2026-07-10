@@ -18,6 +18,7 @@ const titleKeys: Record<string, string> = {
   "/journal": "nav.journal",
   "/balances": "nav.balances",
   "/ingestion": "nav.ingestion",
+  "/reconciliation": "nav.reconciliation",
   "/institutions": "nav.institutions",
   "/audit": "nav.audit"
 };

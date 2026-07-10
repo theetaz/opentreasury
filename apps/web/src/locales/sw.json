@@ -11,7 +11,8 @@
     "institutions": "Taasisi",
     "audit": "Rekodi ya ukaguzi",
     "product": "OpenTreasury",
-    "tagline": "Fedha za umma, hadharani"
+    "tagline": "Fedha za umma, hadharani",
+    "reconciliation": "Ulinganisho"
   },
   "shell": {
     "breadcrumbRoot": "Hazina",
@@ -46,5 +47,12 @@
     "title": "Ukurasa haukupatikana",
     "description": "Ukurasa unaoutafuta haupo au umehamishwa.",
     "backHome": "Rudi kwenye Muhtasari"
+  },
+  "reconciliation": {
+    "title": "Ulinganisho",
+    "description": "Rekodi zilizopokelewa dhidi ya maingizo yaliyowekwa kwenye jarida, kwa kila mfumo na mwezi.",
+    "sourceSystem": "Mfumo chanzo",
+    "fiscalYear": "Mwaka wa fedha",
+    "empty": "Hakuna vipindi vinavyolingana na vichujio hivi."
   }
 }

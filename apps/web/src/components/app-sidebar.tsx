@@ -1,4 +1,4 @@
-import { BookOpenCheck, BookText, Building2, LayoutDashboard, ListChecks, PlugZap, Scale, ScrollText, ShieldCheck } from "lucide-react";
+import { BookOpenCheck, BookText, Building2, GitCompareArrows, LayoutDashboard, ListChecks, PlugZap, Scale, ScrollText, ShieldCheck } from "lucide-react";
 import { useTranslation } from "react-i18next";
 import { Link, useLocation } from "react-router";
 import {
@@ -20,6 +20,7 @@ const items = [
   { key: "journal", url: "/journal", icon: BookText },
   { key: "balances", url: "/balances", icon: Scale },
   { key: "ingestion", url: "/ingestion", icon: PlugZap },
+  { key: "reconciliation", url: "/reconciliation", icon: GitCompareArrows },
   { key: "institutions", url: "/institutions", icon: Building2 },
   { key: "audit", url: "/audit", icon: ScrollText }
 ];
