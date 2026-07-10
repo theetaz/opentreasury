@@ -38,6 +38,8 @@ function InstitutionChips({
         return (
           <Pressable
             key={chip.id || "all"}
+            accessibilityRole="button"
+            accessibilityState={{ selected: active }}
             onPress={() => onSelect(chip.id)}
             style={{
               borderRadius: radius.pill,

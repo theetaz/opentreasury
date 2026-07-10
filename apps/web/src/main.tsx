@@ -5,6 +5,7 @@ import { createBrowserRouter, RouterProvider } from "react-router";
 import { LoginGate } from "./components/login-gate";
 import { routes } from "./routes";
 import { applyTheme, useThemeStore } from "./stores/theme";
+import "./i18n";
 import "./index.css";
 
 applyTheme(useThemeStore.getState().theme);

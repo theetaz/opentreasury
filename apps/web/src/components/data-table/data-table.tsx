@@ -16,6 +16,7 @@ import {
   SelectValue
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { useTranslation } from "react-i18next";
 import {
   Table,
   TableBody,
@@ -56,6 +57,7 @@ export function DataTable<TData>({
   emptyMessage = "No results match these filters.",
   emptyIcon = Inbox
 }: DataTableProps<TData>) {
+  const { t } = useTranslation();
   const table = useReactTable({
     data,
     columns,
@@ -116,13 +118,13 @@ export function DataTable<TData>({
           </span>
           <div className="flex items-center gap-2">
             <Select value={String(pageSize)} onValueChange={(value) => onPageSizeChange(Number(value))}>
-              <SelectTrigger size="sm" className="w-[110px]" aria-label="Rows per page">
+              <SelectTrigger size="sm" className="w-[110px]" aria-label={t("table.rowsPerPage")}>
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
                 {PAGE_SIZE_OPTIONS.map((option) => (
                   <SelectItem key={option} value={String(option)}>
-                    {option} / page
+                    {t("table.perPage", { count: option })}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -130,7 +132,7 @@ export function DataTable<TData>({
             <Button
               variant="outline"
               size="icon"
-              aria-label="Previous page"
+              aria-label={t("table.previousPage")}
               disabled={page <= 1 || isPending}
               onClick={() => onPageChange(page - 1)}
             >
@@ -142,7 +144,7 @@ export function DataTable<TData>({
             <Button
               variant="outline"
               size="icon"
-              aria-label="Next page"
+              aria-label={t("table.nextPage")}
               disabled={page >= pageCount || isPending}
               onClick={() => onPageChange(page + 1)}
             >

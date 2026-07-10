@@ -125,6 +125,7 @@ export default function EntryDetail() {
             ) : null}
 
             <Pressable
+              accessibilityRole="button"
               onPress={runVerification}
               disabled={checking}
               style={{

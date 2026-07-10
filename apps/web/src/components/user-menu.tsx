@@ -1,4 +1,5 @@
 import { LogOut, UserRound } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -13,6 +14,7 @@ import { authEnabled, useAuthStore } from "@/stores/auth";
 export function UserMenu() {
   const user = useAuthStore((state) => state.user);
   const logout = useAuthStore((state) => state.logout);
+  const { t } = useTranslation();
 
   if (!authEnabled || !user) {
     return null;
@@ -41,7 +43,7 @@ export function UserMenu() {
         <DropdownMenuSeparator />
         <DropdownMenuItem onClick={logout}>
           <LogOut aria-hidden />
-          Sign out
+          {t("auth.signOut")}
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

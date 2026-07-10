@@ -55,6 +55,19 @@ The compose stack runs Prometheus (scrape config in
 Overview" dashboard (`infra/docker/grafana/`): request rate, p95 latency,
 error rate, and anchoring throughput.
 
+## Internationalization & Accessibility
+
+The web app ships English and Kiswahili end to end; the language switcher
+lives in the header and the choice persists per browser (`<html lang>` is
+kept in sync for assistive technology). To add a locale: copy
+`apps/web/src/locales/en.json`, translate every key, and register the file
+in `apps/web/src/i18n.ts` — missing keys fall back to English.
+
+Accessibility is enforced in tests: the main routes must produce **zero
+axe-core violations** (see `apps/web/src/i18n.test.tsx`); the shell provides
+a skip-to-content link, a single labeled `main` landmark, and labeled icon
+controls. Keep new pages passing that gate.
+
 ## Mobile App (Expo)
 
 `apps/mobile` is the public-monitoring app: it consumes only the anonymous

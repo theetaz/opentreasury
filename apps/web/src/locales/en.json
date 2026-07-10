@@ -1,0 +1,50 @@
+{
+  "nav": {
+    "primary": "Primary",
+    "overview": "Overview",
+    "transactions": "Transactions",
+    "validation": "Validation",
+    "accounts": "Chart of accounts",
+    "journal": "Journal",
+    "balances": "Balances",
+    "ingestion": "Ingestion",
+    "institutions": "Institutions",
+    "audit": "Audit trail",
+    "product": "OpenTreasury",
+    "tagline": "Public finance, in public"
+  },
+  "shell": {
+    "breadcrumbRoot": "Treasury",
+    "toggleSidebar": "Toggle sidebar",
+    "toggleTheme": "Toggle color theme",
+    "changeLanguage": "Change language",
+    "skipToContent": "Skip to content"
+  },
+  "table": {
+    "rowsPerPage": "Rows per page",
+    "previousPage": "Previous page",
+    "nextPage": "Next page",
+    "page": "Page {{page}} of {{pages}}",
+    "perPage": "{{count}} / page",
+    "noResults": "No results."
+  },
+  "auth": {
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "welcome": "Sign in to OpenTreasury",
+    "welcomeDescription": "Use your treasury identity to continue. Public data does not require an account."
+  },
+  "overview": {
+    "title": "Overview",
+    "description": "The state of the treasury at a glance — published, verifiable, current.",
+    "totalTransactions": "Transactions",
+    "institutions": "Institutions",
+    "journalEntries": "Journal entries",
+    "auditEvents": "Audit events"
+  },
+  "notFound": {
+    "title": "Page not found",
+    "description": "The page you are looking for does not exist or has moved.",
+    "backHome": "Back to Overview"
+  }
+}
