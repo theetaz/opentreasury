@@ -30,7 +30,11 @@ export default function Institutions() {
       renderItem={({ item }) => {
         const open = expanded === item.id;
         return (
-          <Pressable onPress={() => setExpanded(open ? "" : item.id)}>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityState={{ expanded: open }}
+            onPress={() => setExpanded(open ? "" : item.id)}
+          >
             <Card style={{ gap: spacing.sm }}>
               <Row>
                 <View style={{ flex: 1, marginRight: spacing.sm }}>

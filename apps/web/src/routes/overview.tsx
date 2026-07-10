@@ -1,4 +1,5 @@
 import { Bar, BarChart, CartesianGrid, Line, LineChart, XAxis, YAxis } from "recharts";
+import { useTranslation } from "react-i18next";
 import { PageHeader } from "@/components/page-header";
 import { StatTile } from "@/components/stat-tile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -57,14 +58,12 @@ export default function OverviewPage() {
       balance: balance.balanceMinor / 100
     }));
 
+  const { t } = useTranslation();
   const isPending = entries.isPending || balances.isPending;
 
   return (
     <>
-      <PageHeader
-        title="Overview"
-        description="Whole-of-government stocks and flows at a glance."
-      />
+      <PageHeader title={t("overview.title")} description={t("overview.description")} />
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <StatTile
           label="Cash & financial assets"

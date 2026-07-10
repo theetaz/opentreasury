@@ -1,0 +1,50 @@
+{
+  "nav": {
+    "primary": "Msingi",
+    "overview": "Muhtasari",
+    "transactions": "Miamala",
+    "validation": "Uthibitishaji",
+    "accounts": "Chati ya akaunti",
+    "journal": "Jarida",
+    "balances": "Salio",
+    "ingestion": "Upokeaji wa data",
+    "institutions": "Taasisi",
+    "audit": "Rekodi ya ukaguzi",
+    "product": "OpenTreasury",
+    "tagline": "Fedha za umma, hadharani"
+  },
+  "shell": {
+    "breadcrumbRoot": "Hazina",
+    "toggleSidebar": "Fungua au funga upau",
+    "toggleTheme": "Badilisha mandhari",
+    "changeLanguage": "Badilisha lugha",
+    "skipToContent": "Ruka hadi maudhui"
+  },
+  "table": {
+    "rowsPerPage": "Safu kwa ukurasa",
+    "previousPage": "Ukurasa uliopita",
+    "nextPage": "Ukurasa unaofuata",
+    "page": "Ukurasa {{page}} kati ya {{pages}}",
+    "perPage": "{{count}} / ukurasa",
+    "noResults": "Hakuna matokeo."
+  },
+  "auth": {
+    "signIn": "Ingia",
+    "signOut": "Toka",
+    "welcome": "Ingia kwenye OpenTreasury",
+    "welcomeDescription": "Tumia utambulisho wako wa hazina kuendelea. Data ya umma haihitaji akaunti."
+  },
+  "overview": {
+    "title": "Muhtasari",
+    "description": "Hali ya hazina kwa mtazamo mmoja — iliyochapishwa, inayothibitishika, ya sasa.",
+    "totalTransactions": "Miamala",
+    "institutions": "Taasisi",
+    "journalEntries": "Maingizo ya jarida",
+    "auditEvents": "Matukio ya ukaguzi"
+  },
+  "notFound": {
+    "title": "Ukurasa haukupatikana",
+    "description": "Ukurasa unaoutafuta haupo au umehamishwa.",
+    "backHome": "Rudi kwenye Muhtasari"
+  }
+}

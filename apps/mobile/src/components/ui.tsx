@@ -29,6 +29,7 @@ export function Card({
   if (onPress) {
     return (
       <Pressable
+        accessibilityRole="button"
         onPress={onPress}
         style={({ pressed }) => [surface, { opacity: pressed ? 0.7 : 1 }, style]}
       >
