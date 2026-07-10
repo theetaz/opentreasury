@@ -34,6 +34,29 @@ export type TransactionListFilter = {
   limit?: number;
 };
 
+export type ReconciliationRow = {
+  sourceSystem: string;
+  period: string;
+  stagedCount: number;
+  postedCount: number;
+  quarantinedCount: number;
+  stagedAmountMinor: number;
+  postedAmountMinor: number;
+  discrepancyMinor: number;
+  status: "MATCHED" | "ATTENTION" | "DISCREPANCY";
+};
+
+export type ReconciliationListFilter = {
+  sourceSystem?: string;
+  fiscalYear?: number;
+  page?: number;
+  pageSize?: number;
+};
+
+export type ReconciliationListResult =
+  | { ok: true; rows: ReconciliationRow[]; pagination: PageInfo }
+  | { ok: false; error: string };
+
 export type AuditEventListFilter = {
   institutionId?: string;
   dateFrom?: string;
@@ -653,6 +676,51 @@ export function buildStagingPath(filter: StagingListFilter = {}): string {
   if (filter.pageSize) params.set("pageSize", String(filter.pageSize));
   const query = params.toString();
   return query ? `/v1/staging-records?${query}` : "/v1/staging-records";
+}
+
+const simulatedReconciliation: ReconciliationRow[] = [
+  {
+    sourceSystem: "itmis", period: "2026-07", stagedCount: 7, postedCount: 5,
+    quarantinedCount: 1, stagedAmountMinor: 74855075, postedAmountMinor: 74855075,
+    discrepancyMinor: 0, status: "ATTENTION"
+  },
+  {
+    sourceSystem: "itmis", period: "2026-06", stagedCount: 12, postedCount: 12,
+    quarantinedCount: 0, stagedAmountMinor: 182640022, postedAmountMinor: 182640022,
+    discrepancyMinor: 0, status: "MATCHED"
+  }
+];
+
+export async function listReconciliation(filter: ReconciliationListFilter = {}): Promise<ReconciliationListResult> {
+  if (!apiBaseUrl) {
+    const matches = simulatedReconciliation
+      .filter((row) => !filter.sourceSystem || row.sourceSystem === filter.sourceSystem)
+      .filter((row) => !filter.fiscalYear || row.period.startsWith(String(filter.fiscalYear)));
+    const { rows, pagination } = paginate(matches, pageWindow(filter));
+    return { ok: true, rows, pagination };
+  }
+
+  try {
+    const params = new URLSearchParams();
+    if (filter.sourceSystem) params.set("sourceSystem", filter.sourceSystem);
+    if (filter.fiscalYear) params.set("fiscalYear", String(filter.fiscalYear));
+    params.set("page", String(filter.page ?? 1));
+    params.set("pageSize", String(filter.pageSize ?? 15));
+
+    const response = await fetch(`${apiBaseUrl}/v1/reconciliation?${params}`, { headers: authHeaders() });
+    if (!response.ok) {
+      const body = (await response.json().catch(() => undefined)) as { error?: string } | undefined;
+      return { ok: false, error: body?.error ?? `Request failed with status ${response.status}` };
+    }
+    const body = (await response.json()) as { rows?: ReconciliationRow[]; pagination?: PageInfo };
+    return {
+      ok: true,
+      rows: body.rows ?? [],
+      pagination: body.pagination ?? fallbackPageInfo(filter, body.rows?.length ?? 0)
+    };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "Network error" };
+  }
 }
 
 export async function listStagingRecords(filter: StagingListFilter = {}): Promise<StagingListResult> {

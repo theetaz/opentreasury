@@ -11,7 +11,8 @@
     "institutions": "Institutions",
     "audit": "Audit trail",
     "product": "OpenTreasury",
-    "tagline": "Public finance, in public"
+    "tagline": "Public finance, in public",
+    "reconciliation": "Reconciliation"
   },
   "shell": {
     "breadcrumbRoot": "Treasury",
@@ -46,5 +47,12 @@
     "title": "Page not found",
     "description": "The page you are looking for does not exist or has moved.",
     "backHome": "Back to Overview"
+  },
+  "reconciliation": {
+    "title": "Reconciliation",
+    "description": "Staged source records versus posted journal entries, per source system and month.",
+    "sourceSystem": "Source system",
+    "fiscalYear": "Fiscal year",
+    "empty": "No ingested periods match these filters."
   }
 }

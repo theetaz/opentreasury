@@ -376,6 +376,46 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/ErrorResponse"
+  /v1/reconciliation:
+    get:
+      operationId: listReconciliation
+      summary: Reconcile staged source records against posted journal entries
+      description: >-
+        Per source system and calendar month: how many records arrived in
+        staging, how many posted or were quarantined, and whether the staged
+        debit total matches what was actually posted to the journal.
+      parameters:
+        - name: sourceSystem
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Filter by originating source system.
+        - name: fiscalYear
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Filter by fiscal year.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Reconciliation rows for the selected filters.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListReconciliationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "503":
+          description: Reconciliation persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
   /v1/staging-records:
     get:
       operationId: listStagingRecords
@@ -617,6 +657,66 @@ components:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
   schemas:
+    ReconciliationRow:
+      type: object
+      required:
+        - sourceSystem
+        - period
+        - stagedCount
+        - postedCount
+        - quarantinedCount
+        - stagedAmountMinor
+        - postedAmountMinor
+        - discrepancyMinor
+        - status
+      properties:
+        sourceSystem:
+          type: string
+          example: itmis
+        period:
+          type: string
+          pattern: ^\d{4}-\d{2}$
+          example: "2026-07"
+        stagedCount:
+          type: integer
+          minimum: 0
+        postedCount:
+          type: integer
+          minimum: 0
+        quarantinedCount:
+          type: integer
+          minimum: 0
+        stagedAmountMinor:
+          type: integer
+          format: int64
+          description: Debit total of staged records that reached POSTED.
+        postedAmountMinor:
+          type: integer
+          format: int64
+          description: Debit total of the journal entries those records produced.
+        discrepancyMinor:
+          type: integer
+          format: int64
+          description: stagedAmountMinor minus postedAmountMinor; zero when reconciled.
+        status:
+          type: string
+          enum: [MATCHED, ATTENTION, DISCREPANCY]
+          description: >-
+            MATCHED — amounts agree and nothing quarantined. ATTENTION —
+            amounts agree but quarantined records need triage. DISCREPANCY —
+            staged and posted totals differ.
+    ListReconciliationResponse:
+      type: object
+      required:
+        - rows
+        - pagination
+      properties:
+        rows:
+          type: array
+          items:
+            $ref: "#/components/schemas/ReconciliationRow"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
     HealthResponse:
       type: object
       required:

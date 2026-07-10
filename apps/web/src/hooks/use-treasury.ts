@@ -7,6 +7,7 @@ import {
   listBalances,
   listInstitutions,
   listJournalEntries,
+  listReconciliation,
   listStagingRecords,
   listTransactions,
   postJournalEntry,
@@ -17,6 +18,7 @@ import {
   type InstitutionListFilter,
   type JournalEntryInput,
   type JournalEntryListFilter,
+  type ReconciliationListFilter,
   type StagingListFilter,
   type TransactionListFilter,
   type TreasuryTransaction
@@ -47,6 +49,13 @@ export function useStagingRecords(filter: StagingListFilter) {
   return useQuery({
     queryKey: ["staging-records", filter],
     queryFn: () => listStagingRecords(filter)
+  });
+}
+
+export function useReconciliation(filter: ReconciliationListFilter) {
+  return useQuery({
+    queryKey: ["reconciliation", filter],
+    queryFn: () => listReconciliation(filter)
   });
 }
 
