@@ -42,6 +42,27 @@ Organizations:
       - Host: peer0.treasury.opentreasury.local
         Port: 7051
 
+  - &Audit
+    Name: AuditMSP
+    ID: AuditMSP
+    MSPDir: generated/crypto/peerOrganizations/audit.opentreasury.local/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('AuditMSP.admin', 'AuditMSP.peer', 'AuditMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('AuditMSP.admin', 'AuditMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('AuditMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('AuditMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.audit.opentreasury.local
+        Port: 8051
+
 Capabilities:
   Channel: &ChannelCapabilities
     V2_0: true
@@ -129,3 +150,4 @@ Profiles:
       <<: *ApplicationDefaults
       Organizations:
         - *Treasury
+        - *Audit

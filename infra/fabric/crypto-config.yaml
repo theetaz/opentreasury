@@ -1,4 +1,6 @@
-# cryptogen layout for the local single-org Fabric network. All generated
+# cryptogen layout for the local multi-org Fabric network: the treasury and
+# an independent audit institution each run a peer, and the chaincode's
+# endorsement policy requires BOTH to sign every anchor. All generated
 # material lands in generated/ (gitignored) — nothing sensitive is committed.
 OrdererOrgs:
   - Name: Orderer
@@ -10,6 +12,13 @@ OrdererOrgs:
 PeerOrgs:
   - Name: Treasury
     Domain: treasury.opentreasury.local
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
+  - Name: Audit
+    Domain: audit.opentreasury.local
     EnableNodeOUs: true
     Template:
       Count: 1

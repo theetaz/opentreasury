@@ -11,6 +11,21 @@ CHANNEL=opentreasury
 CC_NAME=treasury
 CC_VERSION="1.0"
 CC_SEQUENCE=1
+# Every anchor must be endorsed by BOTH the treasury and the independent
+# audit institution — no single organization can write history alone.
+CC_POLICY="AND('TreasuryMSP.peer','AuditMSP.peer')"
+TREASURY_PEER=peer0.treasury.opentreasury.local:7051
+AUDIT_PEER=peer0.audit.opentreasury.local:8051
+TREASURY_TLS=/work/generated/crypto/peerOrganizations/treasury.opentreasury.local/peers/peer0.treasury.opentreasury.local/tls/ca.crt
+AUDIT_TLS=/work/generated/crypto/peerOrganizations/audit.opentreasury.local/peers/peer0.audit.opentreasury.local/tls/ca.crt
+
+# Run a peer CLI command as the audit organization's admin.
+as_audit=(docker exec
+  -e CORE_PEER_LOCALMSPID=AuditMSP
+  -e CORE_PEER_ADDRESS="$AUDIT_PEER"
+  -e CORE_PEER_TLS_ROOTCERT_FILE="$AUDIT_TLS"
+  -e CORE_PEER_MSPCONFIGPATH=/work/generated/crypto/peerOrganizations/audit.opentreasury.local/users/Admin@audit.opentreasury.local/msp
+  fabric-cli)
 # The orderer listener runs TLS (required for Raft nodes); this CA validates it.
 ORDERER_CA=/work/generated/crypto/ordererOrganizations/opentreasury.local/orderers/orderer.opentreasury.local/tls/ca.crt
 
@@ -30,8 +45,8 @@ if [ ! -f "$FABRIC_DIR/generated/genesis.block" ]; then
     -channelID "$CHANNEL" -outputBlock generated/genesis.block
 fi
 
-echo "==> starting orderer, peer, and cli"
-"${COMPOSE[@]}" up -d --wait orderer peer cli
+echo "==> starting orderer, peers, and cli"
+"${COMPOSE[@]}" up -d --wait orderer peer peer-audit cli
 
 echo "==> joining orderer and peer to channel $CHANNEL"
 docker exec fabric-cli osnadmin channel join \
@@ -39,7 +54,9 @@ docker exec fabric-cli osnadmin channel join \
   -o orderer.opentreasury.local:7053 \
   || echo "    (orderer already joined)"
 docker exec fabric-cli peer channel join -b /work/generated/genesis.block \
-  || echo "    (peer already joined)"
+  || echo "    (treasury peer already joined)"
+"${as_audit[@]}" peer channel join -b /work/generated/genesis.block \
+  || echo "    (audit peer already joined)"
 
 echo "==> packaging chaincode (ccaas)"
 docker exec fabric-cli bash -c '
@@ -51,25 +68,36 @@ docker exec fabric-cli bash -c '
   tar -czf /work/generated/treasury.tar.gz metadata.json code.tar.gz
 '
 
-echo "==> installing chaincode on the peer"
+echo "==> installing chaincode on both peers"
 docker exec fabric-cli peer lifecycle chaincode install /work/generated/treasury.tar.gz \
-  || echo "    (already installed)"
+  || echo "    (already installed on treasury)"
+"${as_audit[@]}" peer lifecycle chaincode install /work/generated/treasury.tar.gz \
+  || echo "    (already installed on audit)"
 PACKAGE_ID=$(docker exec fabric-cli peer lifecycle chaincode calculatepackageid /work/generated/treasury.tar.gz)
 echo "    package id: $PACKAGE_ID"
 
 echo "==> starting chaincode service"
 CHAINCODE_ID="$PACKAGE_ID" "${COMPOSE[@]}" up -d --build treasury-chaincode
 
-echo "==> approving and committing chaincode definition"
+echo "==> approving chaincode definition for both organizations"
 docker exec fabric-cli peer lifecycle chaincode approveformyorg \
   -o orderer.opentreasury.local:7050 --tls --cafile "$ORDERER_CA" \
-  --channelID "$CHANNEL" --name "$CC_NAME" \
+  --channelID "$CHANNEL" --name "$CC_NAME" --signature-policy "$CC_POLICY" \
   --version "$CC_VERSION" --package-id "$PACKAGE_ID" --sequence "$CC_SEQUENCE" \
-  || echo "    (already approved)"
+  || echo "    (already approved by treasury)"
+"${as_audit[@]}" peer lifecycle chaincode approveformyorg \
+  -o orderer.opentreasury.local:7050 --tls --cafile "$ORDERER_CA" \
+  --channelID "$CHANNEL" --name "$CC_NAME" --signature-policy "$CC_POLICY" \
+  --version "$CC_VERSION" --package-id "$PACKAGE_ID" --sequence "$CC_SEQUENCE" \
+  || echo "    (already approved by audit)"
+
+echo "==> committing chaincode definition (endorsement: $CC_POLICY)"
 docker exec fabric-cli peer lifecycle chaincode commit \
   -o orderer.opentreasury.local:7050 --tls --cafile "$ORDERER_CA" \
-  --channelID "$CHANNEL" --name "$CC_NAME" \
+  --channelID "$CHANNEL" --name "$CC_NAME" --signature-policy "$CC_POLICY" \
   --version "$CC_VERSION" --sequence "$CC_SEQUENCE" \
+  --peerAddresses "$TREASURY_PEER" --tlsRootCertFiles "$TREASURY_TLS" \
+  --peerAddresses "$AUDIT_PEER" --tlsRootCertFiles "$AUDIT_TLS" \
   || echo "    (already committed)"
 
 echo "==> smoke check: chaincode reachable through the peer"
