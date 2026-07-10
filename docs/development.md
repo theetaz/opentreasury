@@ -115,10 +115,16 @@ make fabric-up      # crypto material, channel, chaincode (all generated, gitign
 make fabric-gateway # repoint the ledger gateway at Fabric
 ```
 
-The network is one Raft orderer + one peer (org `TreasuryMSP`, channel
-`opentreasury`) with the `treasury` chaincode running as
-chaincode-as-a-service. Anchors then carry `backend: fabric` and a
-`fabric:<channel>:<txid>` reference; the standalone verifier works unchanged.
+The network is one Raft orderer plus one peer each for the treasury
+(`TreasuryMSP`) and an independent audit institution (`AuditMSP`) on channel
+`opentreasury`, with the `treasury` chaincode running as
+chaincode-as-a-service under the endorsement policy
+`AND('TreasuryMSP.peer','AuditMSP.peer')` — every anchor needs both
+organizations' signatures. Stop `fabric-peer-audit` and anchoring halts with
+"no peer combination can satisfy the endorsement policy" (the AnchorLag
+alert fires); start it again and the backlog drains automatically. Anchors
+carry `backend: fabric` and a `fabric:<channel>:<txid>` reference; the
+standalone verifier works unchanged.
 Inspect the chain directly:
 
 ```sh
