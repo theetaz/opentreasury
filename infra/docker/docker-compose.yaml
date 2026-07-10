@@ -135,12 +135,31 @@ services:
     image: prom/prometheus:v3.9.1
     container_name: opentreasury-prometheus
     volumes:
-      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus:/etc/prometheus:ro
     ports:
       - "9090:9090"
     depends_on:
       - core-api
       - ledger-gateway
+
+  loki:
+    image: grafana/loki:3.6.4
+    container_name: opentreasury-loki
+    command: ["-config.file=/etc/loki/local-config.yaml"]
+    volumes:
+      - loki-data:/loki
+
+  promtail:
+    image: grafana/promtail:3.6.4
+    container_name: opentreasury-promtail
+    command: ["-config.file=/etc/promtail/promtail.yml"]
+    volumes:
+      - ./promtail/promtail.yml:/etc/promtail/promtail.yml:ro
+      # Read-only Docker socket: promtail discovers this project's containers
+      # and tails their logs. Local development only.
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+    depends_on:
+      - loki
 
   grafana:
     image: grafana/grafana:12.3.0
@@ -177,3 +196,4 @@ services:
 
 volumes:
   postgres-data:
+  loki-data:

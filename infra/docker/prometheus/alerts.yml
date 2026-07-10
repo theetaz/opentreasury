@@ -1,0 +1,64 @@
+# Alert rules for OpenTreasury. Each alert names its runbook section in
+# docs/runbooks.md. Thresholds are starting points for a pilot deployment —
+# tune them against your SLOs (blueprint section 10.1).
+groups:
+  - name: opentreasury-api
+    rules:
+      - alert: ApiDown
+        expr: up{job="core-api"} == 0
+        for: 1m
+        labels:
+          severity: critical
+        annotations:
+          summary: "core-api scrape target is down"
+          runbook: "docs/runbooks.md#apidown"
+
+      - alert: ApiHighErrorRate
+        expr: >
+          sum(rate(opentreasury_http_requests_total{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(opentreasury_http_requests_total[5m])), 1e-9) > 0.05
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "more than 5% of API requests are failing with 5xx"
+          runbook: "docs/runbooks.md#apihigherrorrate"
+
+      - alert: ApiHighLatency
+        expr: >
+          histogram_quantile(0.95,
+            sum by (le) (rate(opentreasury_http_request_duration_seconds_bucket[5m]))) > 0.5
+        for: 10m
+        labels:
+          severity: warning
+        annotations:
+          summary: "API p95 latency above 500ms for 10 minutes"
+          runbook: "docs/runbooks.md#apihighlatency"
+
+  - name: opentreasury-anchoring
+    rules:
+      - alert: AnchoringFailing
+        expr: increase(opentreasury_anchor_failures_total[15m]) > 0
+        labels:
+          severity: critical
+        annotations:
+          summary: "anchor batches are failing to commit to the ledger backend"
+          runbook: "docs/runbooks.md#anchoringfailing"
+
+      - alert: AnchorLagGrowing
+        expr: opentreasury_anchor_lag_entries > 0
+        for: 15m
+        labels:
+          severity: warning
+        annotations:
+          summary: "posted entries have been waiting more than 15 minutes for an anchor"
+          runbook: "docs/runbooks.md#anchorlaggrowing"
+
+      - alert: GatewayDown
+        expr: up{job="ledger-gateway"} == 0
+        for: 5m
+        labels:
+          severity: critical
+        annotations:
+          summary: "ledger-gateway scrape target is down — nothing is being anchored"
+          runbook: "docs/runbooks.md#gatewaydown"

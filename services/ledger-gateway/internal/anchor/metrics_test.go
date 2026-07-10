@@ -34,3 +34,19 @@ func TestMetricsHandlerServesPrometheusFormat(t *testing.T) {
 	require.Contains(t, body, "opentreasury_anchor_batches_total 1")
 	require.Contains(t, body, "go_goroutines")
 }
+
+func TestMetricsTrackAnchorLagAndLastSuccess(t *testing.T) {
+	metrics := NewMetrics()
+
+	metrics.RecordLag(7)
+	require.Equal(t, float64(7), testutil.ToFloat64(metrics.AnchorLag))
+
+	metrics.RecordLag(0)
+	require.Equal(t, float64(0), testutil.ToFloat64(metrics.AnchorLag))
+
+	require.Equal(t, float64(0), testutil.ToFloat64(metrics.LastSuccessTimestamp),
+		"no success recorded yet")
+	metrics.RecordBatch(1)
+	require.Greater(t, testutil.ToFloat64(metrics.LastSuccessTimestamp), float64(0),
+		"a committed batch stamps the last-success time")
+}

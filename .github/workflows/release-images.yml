@@ -8,6 +8,8 @@ on:
 permissions:
   contents: read
   packages: write
+  # Keyless image signing via the GitHub OIDC identity (Sigstore).
+  id-token: write
 
 jobs:
   build-and-push:
@@ -52,6 +54,7 @@ jobs:
             type=semver,pattern={{major}}.{{minor}}
 
       - name: Build and push
+        id: build
         uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.image.context }}
@@ -59,3 +62,23 @@ jobs:
           push: true
           tags: ${{ steps.meta.outputs.tags }}
           labels: ${{ steps.meta.outputs.labels }}
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3
+
+      - name: Sign image (keyless, Sigstore)
+        run: cosign sign --yes ghcr.io/${{ github.repository }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+
+      - name: Generate SBOM (SPDX)
+        uses: anchore/sbom-action@v0
+        with:
+          image: ghcr.io/${{ github.repository }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
+          format: spdx-json
+          output-file: sbom-${{ matrix.image.name }}.spdx.json
+          artifact-name: sbom-${{ matrix.image.name }}.spdx.json
+
+      - name: Attest SBOM to the image
+        run: |
+          cosign attest --yes --type spdxjson \
+            --predicate sbom-${{ matrix.image.name }}.spdx.json \
+            ghcr.io/${{ github.repository }}/${{ matrix.image.name }}@${{ steps.build.outputs.digest }}
