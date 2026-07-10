@@ -54,7 +54,10 @@ export const useAuthStore = create<AuthState>((set) => ({
   user: null,
   ready: !authEnabled,
   login: () => {
-    void userManager?.signinRedirect();
+    // Carry the deep link through the OIDC round trip so a bookmarked page
+    // lands where the user intended after signing in.
+    const returnTo = window.location.pathname + window.location.search;
+    void userManager?.signinRedirect({ state: { returnTo } });
   },
   logout: () => {
     set({ user: null });
@@ -62,14 +65,20 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
   handleCallback: async () => {
     if (!userManager) return;
+    let returnTo = "/";
     try {
       const user = await userManager.signinRedirectCallback();
+      const state = user.state as { returnTo?: string } | undefined;
+      // Only same-origin paths: anything else would be an open redirect.
+      if (state?.returnTo?.startsWith("/") && !state.returnTo.startsWith("//")) {
+        returnTo = state.returnTo;
+      }
       set({ user: toAuthUser(user), ready: true });
     } finally {
       // Full navigation (not history.replaceState): the router must
-      // re-initialize at "/" — replaceState is invisible to it and leaves the
-      // app rendering the unrouted /auth/callback path.
-      window.location.replace("/");
+      // re-initialize at the destination — replaceState is invisible to it
+      // and leaves the app rendering the unrouted /auth/callback path.
+      window.location.replace(returnTo);
     }
   },
   loadUser: async () => {

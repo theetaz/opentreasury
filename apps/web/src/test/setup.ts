@@ -1,4 +1,8 @@
 import "@/i18n";
+import { configure } from "@testing-library/react";
+
+// Route components are lazy-loaded; give findBy* room for chunk resolution.
+configure({ asyncUtilTimeout: 4000 });
 import "@testing-library/jest-dom/vitest";
 import { cleanup } from "@testing-library/react";
 import { afterEach, vi } from "vitest";
