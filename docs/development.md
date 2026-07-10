@@ -55,6 +55,26 @@ The compose stack runs Prometheus (scrape config in
 Overview" dashboard (`infra/docker/grafana/`): request rate, p95 latency,
 error rate, and anchoring throughput.
 
+## Mobile App (Expo)
+
+`apps/mobile` is the public-monitoring app: it consumes only the anonymous
+public tier (`/public/v1/*`) — overview, entry explorer with server-side
+filtering and pagination, institutions with published balances, and
+**on-device proof verification** (the phone recomputes the canonical hash and
+Merkle proof with `expo-crypto`, mirroring the Go verifier byte for byte).
+
+```sh
+cd apps/mobile
+corepack pnpm install
+EXPO_PUBLIC_API_URL=http://localhost:8080 corepack pnpm start   # Expo Go / simulator
+EXPO_PUBLIC_API_URL=http://localhost:8080 corepack pnpm web     # browser preview
+corepack pnpm test && corepack pnpm typecheck
+```
+
+The app ships dark-only in v1, styled directly from the design tokens. The
+public tier is CORS-open (`Access-Control-Allow-Origin: *`) so the web build
+and any third-party tool can read published data from anywhere.
+
 ## Fabric Anchoring Network (optional)
 
 By default the ledger gateway anchors Merkle roots to the Postgres

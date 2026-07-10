@@ -181,11 +181,25 @@ func isPublicPath(request *http.Request) bool {
 }
 
 func (config routerConfig) withCORS(next http.Handler) http.Handler {
-	if len(config.allowedOrigins) == 0 {
-		return next
-	}
-
 	return http.HandlerFunc(func(response http.ResponseWriter, request *http.Request) {
+		// The anonymous public tier serves published, redacted data that any
+		// site or tool may read — it is CORS-open by design.
+		if strings.HasPrefix(request.URL.Path, "/public/") {
+			response.Header().Set("Access-Control-Allow-Origin", "*")
+			response.Header().Set("Access-Control-Allow-Methods", "GET, OPTIONS")
+			if request.Method == http.MethodOptions {
+				response.WriteHeader(http.StatusNoContent)
+				return
+			}
+			next.ServeHTTP(response, request)
+			return
+		}
+
+		if len(config.allowedOrigins) == 0 {
+			next.ServeHTTP(response, request)
+			return
+		}
+
 		origin := request.Header.Get("Origin")
 		if _, ok := config.allowedOrigins[origin]; ok {
 			response.Header().Set("Access-Control-Allow-Origin", origin)
