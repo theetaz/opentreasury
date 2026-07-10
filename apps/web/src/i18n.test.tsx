@@ -63,7 +63,7 @@ describe("internationalization", () => {
 });
 
 describe("accessibility", () => {
-  it.each(["/", "/journal", "/institutions", "/reconciliation", "/commitments"])(
+  it.each(["/", "/journal", "/institutions", "/reconciliation", "/commitments", "/insights"])(
     "route %s has no axe violations",
     async (path) => {
       const { container } = renderApp(path);

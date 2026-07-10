@@ -45,6 +45,7 @@ type routerConfig struct {
 	anchorRepository         AnchorRepository
 	reconciliationRepository ReconciliationRepository
 	commitmentRepository     CommitmentRepository
+	insightsRepository       InsightsRepository
 	tokenVerifier            auth.TokenVerifier
 	authorizer               Authorizer
 	publication              *authz.Publication
@@ -159,6 +160,8 @@ func NewRouter(options ...RouterOption) http.Handler {
 	mux.HandleFunc("GET /v1/reconciliation", config.listReconciliation)
 	mux.HandleFunc("POST /v1/commitments", config.createCommitment)
 	mux.HandleFunc("GET /v1/commitments", config.listCommitments)
+	mux.HandleFunc("GET /v1/insights/forecast", config.forecastInsights)
+	mux.HandleFunc("GET /v1/insights/anomalies", config.anomalyInsights)
 	config.registerPublicRoutes(mux)
 
 	var handler http.Handler = mux

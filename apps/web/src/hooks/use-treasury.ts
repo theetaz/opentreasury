@@ -7,6 +7,8 @@ import {
   listBalances,
   listInstitutions,
   createCommitment,
+  getAnomalies,
+  getForecast,
   listCommitments,
   listJournalEntries,
   listReconciliation,
@@ -53,6 +55,20 @@ export function useStagingRecords(filter: StagingListFilter) {
   return useQuery({
     queryKey: ["staging-records", filter],
     queryFn: () => listStagingRecords(filter)
+  });
+}
+
+export function useForecast(institutionId?: string, horizon = 6) {
+  return useQuery({
+    queryKey: ["insights-forecast", institutionId, horizon],
+    queryFn: () => getForecast(institutionId, horizon)
+  });
+}
+
+export function useAnomalies(institutionId: string | undefined, page: number, pageSize: number) {
+  return useQuery({
+    queryKey: ["insights-anomalies", institutionId, page, pageSize],
+    queryFn: () => getAnomalies(institutionId, page, pageSize)
   });
 }
 

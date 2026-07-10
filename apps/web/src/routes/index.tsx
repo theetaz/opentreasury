@@ -13,6 +13,7 @@ const CommitmentsPage = lazy(() => import("./commitments"));
 const BalancesPage = lazy(() => import("./balances"));
 const IngestionPage = lazy(() => import("./ingestion"));
 const ReconciliationPage = lazy(() => import("./reconciliation"));
+const InsightsPage = lazy(() => import("./insights"));
 const InstitutionsPage = lazy(() => import("./institutions"));
 const AuditPage = lazy(() => import("./audit"));
 const NotFoundPage = lazy(() => import("./not-found"));
@@ -45,6 +46,7 @@ export const routes: RouteObject[] = [
       { path: "balances", element: page(<BalancesPage />) },
       { path: "ingestion", element: page(<IngestionPage />) },
       { path: "reconciliation", element: page(<ReconciliationPage />) },
+      { path: "insights", element: page(<InsightsPage />) },
       { path: "institutions", element: page(<InstitutionsPage />) },
       { path: "audit", element: page(<AuditPage />) },
       { path: "*", element: page(<NotFoundPage />) }

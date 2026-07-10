@@ -13,7 +13,8 @@
     "product": "OpenTreasury",
     "tagline": "Public finance, in public",
     "reconciliation": "Reconciliation",
-    "commitments": "Commitments"
+    "commitments": "Commitments",
+    "insights": "Insights"
   },
   "shell": {
     "breadcrumbRoot": "Treasury",
@@ -73,5 +74,18 @@
     "created": "Commitment {{id}} recorded.",
     "save": "Record commitment",
     "saving": "Recording…"
+  },
+  "insights": {
+    "title": "Insights",
+    "description": "Flow projections and unusual amounts, computed with disclosed baseline methods.",
+    "institution": "Institution",
+    "forecastTitle": "Posted flows: history and projection",
+    "forecastDescription": "Monthly posted debit totals with a short-range projection.",
+    "actual": "Actual",
+    "projected": "Projected",
+    "noHistory": "Not enough posted history to project yet.",
+    "anomaliesTitle": "Unusual amounts",
+    "anomaliesDescription": "Amounts far outside what is typical for their account.",
+    "noAnomalies": "Nothing unusual — every amount is in line with its account's history."
   }
 }
