@@ -72,7 +72,7 @@ jobs:
           run_install: false
 
       - name: Install web workspace dependencies
-        run: pnpm install --filter @opentreasury/web --filter @opentreasury/types --filter @opentreasury/ui --frozen-lockfile
+        run: pnpm install --filter @opentreasury/web --filter @opentreasury/mobile --filter @opentreasury/types --filter @opentreasury/ui --frozen-lockfile
 
       - name: Verify
         run: make verify

@@ -76,7 +76,8 @@ verify-integration:
 verify-js:
 	@if [ -d node_modules ]; then \
 		$(PNPM) --filter @opentreasury/web test; \
-		$(PNPM) --filter @opentreasury/web --filter @opentreasury/types --filter @opentreasury/ui typecheck; \
+		$(PNPM) --filter @opentreasury/mobile test; \
+		$(PNPM) --filter @opentreasury/web --filter @opentreasury/mobile --filter @opentreasury/types --filter @opentreasury/ui typecheck; \
 	else \
 		echo "Skipping JS verification until pnpm dependencies are installed."; \
 	fi
