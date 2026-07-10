@@ -159,9 +159,9 @@ func TestTransparencyLogChainsSequentially(t *testing.T) {
 	ctx := context.Background()
 	log := anchor.NewTransparencyLog(db)
 
-	ref1, err := log.Commit(ctx, "root-a")
+	ref1, err := log.Commit(ctx, "root-a", 1)
 	require.NoError(t, err)
-	ref2, err := log.Commit(ctx, "root-b")
+	ref2, err := log.Commit(ctx, "root-b", 1)
 	require.NoError(t, err)
 	require.NotEqual(t, ref1, ref2)
 

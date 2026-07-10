@@ -55,6 +55,32 @@ The compose stack runs Prometheus (scrape config in
 Overview" dashboard (`infra/docker/grafana/`): request rate, p95 latency,
 error rate, and anchoring throughput.
 
+## Fabric Anchoring Network (optional)
+
+By default the ledger gateway anchors Merkle roots to the Postgres
+transparency log. To anchor to a local Hyperledger Fabric network instead
+(ADR-0004):
+
+```sh
+make up             # the Fabric network joins the main stack's Docker network
+make fabric-up      # crypto material, channel, chaincode (all generated, gitignored)
+make fabric-gateway # repoint the ledger gateway at Fabric
+```
+
+The network is one Raft orderer + one peer (org `TreasuryMSP`, channel
+`opentreasury`) with the `treasury` chaincode running as
+chaincode-as-a-service. Anchors then carry `backend: fabric` and a
+`fabric:<channel>:<txid>` reference; the standalone verifier works unchanged.
+Inspect the chain directly:
+
+```sh
+docker exec fabric-cli peer chaincode query -C opentreasury -n treasury \
+  -c '{"function":"GetAnchor","Args":["<merkle-root>"]}'
+```
+
+`make fabric-down` stops the network; `make fabric-purge` also wipes ledger
+volumes and generated crypto material.
+
 ## Kubernetes (Helm)
 
 `infra/helm/opentreasury` deploys the services to a cluster; PostgreSQL and

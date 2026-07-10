@@ -1,0 +1,131 @@
+# Channel genesis configuration for the local OpenTreasury Fabric network:
+# one Raft orderer, one peer org (Treasury). Fabric 2.5 channel-participation
+# style — the genesis block is created directly for the application channel.
+# Paths are relative to this directory (configtxgen runs with -configPath here).
+
+Organizations:
+  - &OrdererOrg
+    Name: OrdererOrg
+    ID: OrdererMSP
+    MSPDir: generated/crypto/ordererOrganizations/opentreasury.local/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Writers:
+        Type: Signature
+        Rule: "OR('OrdererMSP.member')"
+      Admins:
+        Type: Signature
+        Rule: "OR('OrdererMSP.admin')"
+    OrdererEndpoints:
+      - orderer.opentreasury.local:7050
+
+  - &Treasury
+    Name: TreasuryMSP
+    ID: TreasuryMSP
+    MSPDir: generated/crypto/peerOrganizations/treasury.opentreasury.local/msp
+    Policies:
+      Readers:
+        Type: Signature
+        Rule: "OR('TreasuryMSP.admin', 'TreasuryMSP.peer', 'TreasuryMSP.client')"
+      Writers:
+        Type: Signature
+        Rule: "OR('TreasuryMSP.admin', 'TreasuryMSP.client')"
+      Admins:
+        Type: Signature
+        Rule: "OR('TreasuryMSP.admin')"
+      Endorsement:
+        Type: Signature
+        Rule: "OR('TreasuryMSP.peer')"
+    AnchorPeers:
+      - Host: peer0.treasury.opentreasury.local
+        Port: 7051
+
+Capabilities:
+  Channel: &ChannelCapabilities
+    V2_0: true
+  Orderer: &OrdererCapabilities
+    V2_0: true
+  Application: &ApplicationCapabilities
+    V2_5: true
+
+Application: &ApplicationDefaults
+  Organizations:
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    LifecycleEndorsement:
+      Type: ImplicitMeta
+      Rule: "ANY Endorsement"
+    Endorsement:
+      Type: ImplicitMeta
+      Rule: "ANY Endorsement"
+  Capabilities:
+    <<: *ApplicationCapabilities
+
+Orderer: &OrdererDefaults
+  OrdererType: etcdraft
+  Addresses:
+    - orderer.opentreasury.local:7050
+  EtcdRaft:
+    Consenters:
+      # Raft consenter entries require TLS certs in the channel config even
+      # though this single-node dev network runs with TLS disabled.
+      - Host: orderer.opentreasury.local
+        Port: 7050
+        ClientTLSCert: generated/crypto/ordererOrganizations/opentreasury.local/orderers/orderer.opentreasury.local/tls/server.crt
+        ServerTLSCert: generated/crypto/ordererOrganizations/opentreasury.local/orderers/orderer.opentreasury.local/tls/server.crt
+  BatchTimeout: 1s
+  BatchSize:
+    MaxMessageCount: 100
+    AbsoluteMaxBytes: 10 MB
+    PreferredMaxBytes: 2 MB
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+    BlockValidation:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+  Capabilities:
+    <<: *OrdererCapabilities
+
+Channel: &ChannelDefaults
+  Policies:
+    Readers:
+      Type: ImplicitMeta
+      Rule: "ANY Readers"
+    Writers:
+      Type: ImplicitMeta
+      Rule: "ANY Writers"
+    Admins:
+      Type: ImplicitMeta
+      Rule: "MAJORITY Admins"
+  Capabilities:
+    <<: *ChannelCapabilities
+
+Profiles:
+  OpenTreasuryGenesis:
+    <<: *ChannelDefaults
+    Orderer:
+      <<: *OrdererDefaults
+      Organizations:
+        - *OrdererOrg
+    Application:
+      <<: *ApplicationDefaults
+      Organizations:
+        - *Treasury

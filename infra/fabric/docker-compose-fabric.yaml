@@ -1,0 +1,117 @@
+# Local single-org Hyperledger Fabric network for OpenTreasury anchoring.
+# Runs on the main stack's Docker network so the ledger gateway can reach the
+# peer. TLS is disabled — this network is for local development only; a
+# production network is multi-org with TLS and HSM-backed MSPs (ADR-0004).
+#
+# Bring-up is scripted: make fabric-up (see scripts/fabric-up.sh).
+name: opentreasury-fabric
+
+networks:
+  default:
+    name: opentreasury_default
+    external: true
+
+volumes:
+  orderer-data:
+  peer-data:
+
+services:
+  orderer:
+    image: hyperledger/fabric-orderer:2.5
+    container_name: fabric-orderer
+    environment:
+      FABRIC_LOGGING_SPEC: INFO
+      ORDERER_GENERAL_LISTENADDRESS: 0.0.0.0
+      ORDERER_GENERAL_LISTENPORT: "7050"
+      ORDERER_GENERAL_LOCALMSPID: OrdererMSP
+      ORDERER_GENERAL_LOCALMSPDIR: /var/hyperledger/orderer/msp
+      # Raft ordering nodes require TLS on the general listener even as a
+      # single node. The peer and admin endpoints stay plaintext locally.
+      ORDERER_GENERAL_TLS_ENABLED: "true"
+      ORDERER_GENERAL_TLS_PRIVATEKEY: /var/hyperledger/orderer/tls/server.key
+      ORDERER_GENERAL_TLS_CERTIFICATE: /var/hyperledger/orderer/tls/server.crt
+      ORDERER_GENERAL_TLS_ROOTCAS: "[/var/hyperledger/orderer/tls/ca.crt]"
+      ORDERER_GENERAL_BOOTSTRAPMETHOD: none
+      ORDERER_CHANNELPARTICIPATION_ENABLED: "true"
+      ORDERER_ADMIN_LISTENADDRESS: 0.0.0.0:7053
+      ORDERER_ADMIN_TLS_ENABLED: "false"
+    volumes:
+      - ./generated/crypto/ordererOrganizations/opentreasury.local/orderers/orderer.opentreasury.local/msp:/var/hyperledger/orderer/msp:ro
+      - ./generated/crypto/ordererOrganizations/opentreasury.local/orderers/orderer.opentreasury.local/tls:/var/hyperledger/orderer/tls:ro
+      - orderer-data:/var/hyperledger/production/orderer
+    networks:
+      default:
+        aliases:
+          - orderer.opentreasury.local
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/7053"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  peer:
+    image: hyperledger/fabric-peer:2.5
+    container_name: fabric-peer
+    environment:
+      FABRIC_LOGGING_SPEC: INFO
+      CORE_PEER_ID: peer0.treasury.opentreasury.local
+      CORE_PEER_ADDRESS: peer0.treasury.opentreasury.local:7051
+      CORE_PEER_LISTENADDRESS: 0.0.0.0:7051
+      CORE_PEER_CHAINCODEADDRESS: peer0.treasury.opentreasury.local:7052
+      CORE_PEER_CHAINCODELISTENADDRESS: 0.0.0.0:7052
+      CORE_PEER_GOSSIP_BOOTSTRAP: peer0.treasury.opentreasury.local:7051
+      CORE_PEER_GOSSIP_EXTERNALENDPOINT: peer0.treasury.opentreasury.local:7051
+      CORE_PEER_LOCALMSPID: TreasuryMSP
+      CORE_PEER_MSPCONFIGPATH: /etc/hyperledger/fabric/msp
+      # The peer's client connections (block delivery from the orderer) share
+      # this switch, so the whole node runs TLS like a production network.
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_CERT_FILE: /etc/hyperledger/fabric/tls/server.crt
+      CORE_PEER_TLS_KEY_FILE: /etc/hyperledger/fabric/tls/server.key
+      CORE_PEER_TLS_ROOTCERT_FILE: /etc/hyperledger/fabric/tls/ca.crt
+      CORE_LEDGER_STATE_STATEDATABASE: goleveldb
+    volumes:
+      - ./generated/crypto/peerOrganizations/treasury.opentreasury.local/peers/peer0.treasury.opentreasury.local/msp:/etc/hyperledger/fabric/msp:ro
+      - ./generated/crypto/peerOrganizations/treasury.opentreasury.local/peers/peer0.treasury.opentreasury.local/tls:/etc/hyperledger/fabric/tls:ro
+      - peer-data:/var/hyperledger/production
+    networks:
+      default:
+        aliases:
+          - peer0.treasury.opentreasury.local
+    depends_on:
+      orderer:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/localhost/7051"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  cli:
+    image: hyperledger/fabric-tools:2.5
+    container_name: fabric-cli
+    command: ["tail", "-f", "/dev/null"]
+    environment:
+      FABRIC_LOGGING_SPEC: INFO
+      CORE_PEER_ID: cli
+      CORE_PEER_ADDRESS: peer0.treasury.opentreasury.local:7051
+      CORE_PEER_LOCALMSPID: TreasuryMSP
+      CORE_PEER_TLS_ENABLED: "true"
+      CORE_PEER_TLS_ROOTCERT_FILE: /work/generated/crypto/peerOrganizations/treasury.opentreasury.local/peers/peer0.treasury.opentreasury.local/tls/ca.crt
+      CORE_PEER_MSPCONFIGPATH: /work/generated/crypto/peerOrganizations/treasury.opentreasury.local/users/Admin@treasury.opentreasury.local/msp
+    volumes:
+      - .:/work
+    working_dir: /work
+    depends_on:
+      peer:
+        condition: service_healthy
+
+  treasury-chaincode:
+    build:
+      context: ../../chaincode/treasury
+    image: opentreasury/treasury-chaincode:local
+    container_name: treasury-chaincode
+    environment:
+      CHAINCODE_SERVER_ADDRESS: 0.0.0.0:9999
+      # The package id is computed during fabric-up and passed through.
+      CHAINCODE_ID: ${CHAINCODE_ID:-}
