@@ -1,0 +1,1055 @@
+openapi: 3.1.0
+info:
+  title: OpenTreasury Core API
+  version: 0.1.0
+  description: >-
+    Core treasury transaction API for OpenTreasury.
+
+
+    Conventions: every error response uses the ErrorResponse envelope. Internal
+    failures return a sanitized `internal server error` message (details are
+    logged server-side with the request ID, never returned). All responses
+    carry an `X-Request-ID` header — clients may supply their own. `limit`
+    parameters are validated strictly: values outside 1..100 are rejected with
+    400 rather than silently clamped. Request bodies above 1 MiB are rejected
+    with 413. Cross-origin requests are allowed only for origins configured via
+    `OPENTREASURY_ALLOWED_ORIGINS` (methods GET, POST, OPTIONS; header
+    Content-Type).
+servers:
+  - url: http://localhost:8080
+paths:
+  /healthz:
+    get:
+      operationId: getHealth
+      summary: Get service liveness
+      description: Liveness probe. Always returns 200 while the process serves traffic.
+      responses:
+        "200":
+          description: Service is healthy.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/HealthResponse"
+  /readyz:
+    get:
+      operationId: getReadiness
+      summary: Get service readiness
+      description: >-
+        Readiness probe. Returns 200 when all dependency checks (such as
+        database connectivity) pass, and 503 when any check fails.
+      responses:
+        "200":
+          description: Service is ready to serve requests.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+        "503":
+          description: A dependency check failed; the service is not ready.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ReadinessResponse"
+  /v1/accounts:
+    get:
+      operationId: listAccounts
+      summary: List accounts of the active chart of accounts
+      parameters:
+        - name: accountType
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ASSET
+              - LIABILITY
+              - NET_WORTH
+              - REVENUE
+              - EXPENSE
+          description: Filter accounts by classification type.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Accounts of the active chart version in code order.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAccountsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Account persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/journal-entries:
+    get:
+      operationId: listJournalEntries
+      summary: List posted journal entries
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string, minLength: 1 }
+        - name: fiscalYear
+          in: query
+          required: false
+          schema: { type: integer, minimum: 1 }
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [POSTED, REVERSED] }
+        - $ref: "#/components/parameters/dateFrom"
+        - $ref: "#/components/parameters/dateTo"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Matching journal entries with their lines.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListJournalEntriesResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503":
+          description: Journal persistence is not available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    post:
+      operationId: postJournalEntry
+      summary: Post a balanced double-entry journal entry
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/JournalEntryInput" }
+      responses:
+        "201":
+          description: Entry posted; balances updated.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/CreateEntryResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "409":
+          description: An entry with the same id already exists.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "413": { $ref: "#/components/responses/PayloadTooLarge" }
+        "422":
+          description: The referenced institution does not exist.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503":
+          description: Journal persistence is not available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /v1/balances:
+    get:
+      operationId: listBalances
+      summary: List materialized account balances
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string, minLength: 1 }
+        - name: accountCode
+          in: query
+          required: false
+          schema: { type: string, minLength: 1 }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Balances per institution, account, and currency.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListBalancesResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "500": { $ref: "#/components/responses/InternalError" }
+        "503":
+          description: Balance persistence is not available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /v1/audit-events:
+    get:
+      operationId: listAuditEvents
+      summary: List treasury audit events
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Filter audit events by institution identifier.
+        - $ref: "#/components/parameters/dateFrom"
+        - $ref: "#/components/parameters/dateTo"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Matching audit events ordered by most recent occurrence.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListAuditEventsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Audit event persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/institutions:
+    get:
+      operationId: listInstitutions
+      summary: List treasury institutions
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema:
+            type: string
+            enum:
+              - ACTIVE
+              - INACTIVE
+          description: Filter institutions by status.
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Treasury institutions ordered by name.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListInstitutionsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Institution persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/transactions/validate:
+    post:
+      operationId: validateTransaction
+      summary: Validate a treasury transaction without persisting it
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TreasuryTransaction"
+      responses:
+        "200":
+          description: Transaction is valid.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ValidationResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+  /v1/transactions:
+    get:
+      operationId: listTransactions
+      summary: List treasury transactions
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema:
+            type: string
+            minLength: 1
+          description: Filter transactions by institution identifier.
+        - name: fiscalYear
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+          description: Filter transactions by fiscal year.
+        - name: amountGte
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Minimum amount in minor units (inclusive).
+        - name: amountLte
+          in: query
+          required: false
+          schema:
+            type: integer
+            format: int64
+            minimum: 0
+          description: Maximum amount in minor units (inclusive).
+        - $ref: "#/components/parameters/dateFrom"
+        - $ref: "#/components/parameters/dateTo"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+        - $ref: "#/components/parameters/limit"
+      responses:
+        "200":
+          description: Matching transactions ordered by most recent transaction date.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ListTransactionsResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Transaction persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+    post:
+      operationId: createTransaction
+      summary: Create a treasury transaction
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/TreasuryTransaction"
+      responses:
+        "201":
+          description: Transaction was created.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/CreateTransactionResponse"
+        "400":
+          $ref: "#/components/responses/BadRequest"
+        "409":
+          description: A transaction with the same identifier already exists.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "413":
+          $ref: "#/components/responses/PayloadTooLarge"
+        "422":
+          description: The referenced institution does not exist.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+        "500":
+          $ref: "#/components/responses/InternalError"
+        "503":
+          description: Transaction persistence is not available.
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ErrorResponse"
+  /v1/staging-records:
+    get:
+      operationId: listStagingRecords
+      summary: List ingested staging records
+      parameters:
+        - name: status
+          in: query
+          required: false
+          schema: { type: string, enum: [POSTED, QUARANTINED] }
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string }
+        - name: sourceSystem
+          in: query
+          required: false
+          schema: { type: string }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Ingested records with per-record status.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListStagingRecordsResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "503":
+          description: Staging persistence is not available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+    post:
+      operationId: submitStagingRecords
+      summary: Submit a batch of interchange records (connector on-ramp)
+      description: >-
+        At-least-once ingestion. Each record is deduplicated by sourceHash,
+        then posted to the journal or quarantined with a reason. Requires the
+        connector role.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/StagingBatchInput" }
+      responses:
+        "200":
+          description: Per-record outcomes.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/StagingOutcomesResponse" }
+        "400": { $ref: "#/components/responses/BadRequest" }
+        "403":
+          description: Not authorized to submit for the target institution.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /v1/entries/{id}/proof:
+    get:
+      operationId: getEntryProof
+      summary: Get the tamper-evidence proof for a journal entry
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Anchor receipt + Merkle inclusion proof.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntryProof" }
+        "404":
+          description: The entry has not been anchored yet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /public/v1/entries/{id}/proof:
+    get:
+      operationId: getPublicEntryProof
+      summary: Get the tamper-evidence proof for a journal entry (anonymous)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string }
+      responses:
+        "200":
+          description: Anchor receipt + Merkle inclusion proof (immutable, cacheable).
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/EntryProof" }
+        "404":
+          description: The entry has not been anchored yet.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ErrorResponse" }
+  /public/v1/institutions:
+    get:
+      operationId: publicListInstitutions
+      summary: List institutions (anonymous public tier)
+      description: Anonymous, rate-limited, policy-redacted. Cache-Control public.
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Public institutions.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListInstitutionsResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /public/v1/accounts:
+    get:
+      operationId: publicListAccounts
+      summary: List chart of accounts (anonymous public tier)
+      parameters:
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Public chart of accounts.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListAccountsResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /public/v1/balances:
+    get:
+      operationId: publicListBalances
+      summary: List account balances (anonymous public tier)
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string }
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Public balances.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/ListBalancesResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+  /public/v1/journal-entries:
+    get:
+      operationId: publicListJournalEntries
+      summary: List journal entries (anonymous public tier, redacted)
+      description: >-
+        Policy-redacted projection: entry descriptions and idempotency keys are
+        not published; structure, amounts, accounts, and dates are.
+      parameters:
+        - name: institutionId
+          in: query
+          required: false
+          schema: { type: string }
+        - $ref: "#/components/parameters/dateFrom"
+        - $ref: "#/components/parameters/dateTo"
+        - $ref: "#/components/parameters/page"
+        - $ref: "#/components/parameters/pageSize"
+      responses:
+        "200":
+          description: Public journal entries.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/PublicListJournalEntriesResponse" }
+        "429": { $ref: "#/components/responses/RateLimited" }
+components:
+  parameters:
+    page:
+      name: page
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        default: 1
+      description: 1-based page number.
+    pageSize:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+        default: 15
+      description: Rows per page.
+    limit:
+      name: limit
+      in: query
+      required: false
+      deprecated: true
+      schema:
+        type: integer
+        minimum: 1
+        maximum: 100
+      description: Deprecated alias for pageSize.
+    dateFrom:
+      name: dateFrom
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+      description: Inclusive lower date bound.
+    dateTo:
+      name: dateTo
+      in: query
+      required: false
+      schema:
+        type: string
+        format: date
+      description: Inclusive upper date bound. Must not precede dateFrom.
+  responses:
+    RateLimited:
+      description: Per-client rate limit exceeded on the public tier.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    BadRequest:
+      description: Request payload is invalid.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalError:
+      description: >-
+        Unexpected server failure. The message is always the sanitized string
+        `internal server error`; diagnostic detail is available to operators
+        via server logs keyed by the X-Request-ID header.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    PayloadTooLarge:
+      description: Request body exceeds the 1 MiB limit.
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+  schemas:
+    HealthResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ok
+    ReadinessResponse:
+      type: object
+      required:
+        - status
+      properties:
+        status:
+          type: string
+          enum:
+            - ready
+            - unavailable
+    TreasuryTransaction:
+      type: object
+      required:
+        - id
+        - institutionId
+        - fiscalYear
+        - amountMinor
+        - currency
+        - description
+        - transactionDate
+      properties:
+        id:
+          type: string
+          minLength: 1
+          example: txn-2026-0001
+        institutionId:
+          type: string
+          minLength: 1
+          example: minfin
+        fiscalYear:
+          type: integer
+          minimum: 1
+          example: 2026
+        amountMinor:
+          type: integer
+          minimum: 1
+          description: Monetary amount in the currency minor unit.
+          example: 125000
+        currency:
+          type: string
+          pattern: ^[A-Z]{3}$
+          example: USD
+        description:
+          type: string
+          minLength: 1
+          example: Road maintenance payment
+        transactionDate:
+          type: string
+          format: date
+          example: "2026-06-28"
+    CreateTransactionResponse:
+      type: object
+      required:
+        - id
+      properties:
+        id:
+          type: string
+    ListTransactionsResponse:
+      type: object
+      required:
+        - transactions
+        - pagination
+      properties:
+        transactions:
+          type: array
+          items:
+            $ref: "#/components/schemas/TreasuryTransaction"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    ListAuditEventsResponse:
+      type: object
+      required:
+        - events
+        - pagination
+      properties:
+        events:
+          type: array
+          items:
+            $ref: "#/components/schemas/AuditEvent"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    ListInstitutionsResponse:
+      type: object
+      required:
+        - institutions
+        - pagination
+      properties:
+        institutions:
+          type: array
+          items:
+            $ref: "#/components/schemas/Institution"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    Account:
+      type: object
+      required:
+        - code
+        - name
+        - accountType
+        - active
+        - depth
+      properties:
+        code:
+          type: string
+          description: Hierarchical account code within the chart version.
+        name:
+          type: string
+        accountType:
+          type: string
+          enum:
+            - ASSET
+            - LIABILITY
+            - NET_WORTH
+            - REVENUE
+            - EXPENSE
+        parentCode:
+          type: string
+        gfsmCode:
+          type: string
+          description: IMF GFSM 2014 economic classification mapping.
+        cofogCode:
+          type: string
+          description: COFOG functional classification mapping.
+        active:
+          type: boolean
+        depth:
+          type: integer
+          minimum: 0
+          description: Distance from a root account in the hierarchy (0-based).
+    ListAccountsResponse:
+      type: object
+      required:
+        - accounts
+        - pagination
+      properties:
+        accounts:
+          type: array
+          items:
+            $ref: "#/components/schemas/Account"
+        pagination:
+          $ref: "#/components/schemas/Pagination"
+    JournalLine:
+      type: object
+      required: [accountCode, direction, amountMinor, currency]
+      properties:
+        accountCode: { type: string }
+        direction: { type: string, enum: [DEBIT, CREDIT] }
+        amountMinor: { type: integer, format: int64, minimum: 1 }
+        currency: { type: string, minLength: 3, maxLength: 3 }
+    JournalEntryInput:
+      type: object
+      required: [id, institutionId, fiscalYear, effectiveDate, description, lines]
+      properties:
+        id: { type: string }
+        institutionId: { type: string }
+        fiscalYear: { type: integer, minimum: 1 }
+        effectiveDate: { type: string, format: date }
+        description: { type: string }
+        idempotencyKey: { type: string }
+        lines:
+          type: array
+          minItems: 2
+          items: { $ref: "#/components/schemas/JournalLine" }
+    JournalEntry:
+      type: object
+      required: [id, institutionId, fiscalYear, effectiveDate, description, status, entryType, lines]
+      properties:
+        id: { type: string }
+        institutionId: { type: string }
+        fiscalYear: { type: integer }
+        effectiveDate: { type: string, format: date }
+        description: { type: string }
+        status: { type: string, enum: [POSTED, REVERSED] }
+        entryType: { type: string, enum: [STANDARD, REVERSAL] }
+        reversesEntryId: { type: string }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/JournalLine" }
+    CreateEntryResponse:
+      type: object
+      required: [id]
+      properties:
+        id: { type: string }
+    ListJournalEntriesResponse:
+      type: object
+      required: [entries, pagination]
+      properties:
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/JournalEntry" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    Balance:
+      type: object
+      required: [institutionId, accountCode, currency, balanceMinor]
+      properties:
+        institutionId: { type: string }
+        accountCode: { type: string }
+        accountName: { type: string }
+        accountType: { type: string }
+        currency: { type: string }
+        balanceMinor: { type: integer, format: int64 }
+    ListBalancesResponse:
+      type: object
+      required: [balances, pagination]
+      properties:
+        balances:
+          type: array
+          items: { $ref: "#/components/schemas/Balance" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    PublicJournalEntry:
+      type: object
+      description: Journal entry as published on the anonymous tier (no description).
+      required: [id, institutionId, fiscalYear, effectiveDate, status, entryType, lines]
+      properties:
+        id: { type: string }
+        institutionId: { type: string }
+        fiscalYear: { type: integer }
+        effectiveDate: { type: string, format: date }
+        status: { type: string, enum: [POSTED, REVERSED] }
+        entryType: { type: string, enum: [STANDARD, REVERSAL] }
+        reversesEntryId: { type: string }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/JournalLine" }
+    PublicListJournalEntriesResponse:
+      type: object
+      required: [entries, pagination]
+      properties:
+        entries:
+          type: array
+          items: { $ref: "#/components/schemas/PublicJournalEntry" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    StagingRecordInput:
+      type: object
+      required: [sourceSystem, sourceRef, sourceHash, institutionId, occurredAt, lines]
+      properties:
+        sourceSystem: { type: string }
+        sourceRef: { type: string }
+        sourceHash: { type: string, description: End-to-end idempotency key. }
+        profile: { type: string }
+        institutionId: { type: string }
+        occurredAt: { type: string, format: date }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/JournalLine" }
+    StagingBatchInput:
+      type: object
+      required: [records]
+      properties:
+        records:
+          type: array
+          maxItems: 500
+          items: { $ref: "#/components/schemas/StagingRecordInput" }
+    StagingOutcome:
+      type: object
+      required: [sourceRef, sourceHash, status]
+      properties:
+        sourceRef: { type: string }
+        sourceHash: { type: string }
+        status: { type: string, enum: [POSTED, QUARANTINED, DUPLICATE] }
+        reason: { type: string }
+        entryId: { type: string }
+    StagingOutcomesResponse:
+      type: object
+      required: [outcomes]
+      properties:
+        outcomes:
+          type: array
+          items: { $ref: "#/components/schemas/StagingOutcome" }
+    StagingRecord:
+      type: object
+      required: [id, sourceSystem, sourceRef, institutionId, occurredAt, status, createdAt, lines]
+      properties:
+        id: { type: string }
+        sourceSystem: { type: string }
+        sourceRef: { type: string }
+        profile: { type: string }
+        institutionId: { type: string }
+        occurredAt: { type: string, format: date }
+        status: { type: string, enum: [POSTED, QUARANTINED] }
+        reason: { type: string }
+        entryId: { type: string }
+        createdAt: { type: string }
+        lines:
+          type: array
+          items: { $ref: "#/components/schemas/JournalLine" }
+    ListStagingRecordsResponse:
+      type: object
+      required: [records, pagination]
+      properties:
+        records:
+          type: array
+          items: { $ref: "#/components/schemas/StagingRecord" }
+        pagination: { $ref: "#/components/schemas/Pagination" }
+    ProofStep:
+      type: object
+      required: [hash, left]
+      properties:
+        hash: { type: string }
+        left: { type: boolean, description: Whether the sibling is on the left. }
+    EntryProof:
+      type: object
+      required: [entry, anchor, leafHash, proof]
+      properties:
+        entry: { $ref: "#/components/schemas/PublicJournalEntry" }
+        anchor:
+          type: object
+          required: [id, merkleRoot, backend, backendRef, anchoredAt]
+          properties:
+            id: { type: string }
+            merkleRoot: { type: string }
+            backend: { type: string }
+            backendRef: { type: string }
+            anchoredAt: { type: string }
+        leafHash: { type: string }
+        proof:
+          type: array
+          items: { $ref: "#/components/schemas/ProofStep" }
+    Pagination:
+      type: object
+      description: Server-side page window. Table state travels in query parameters.
+      required:
+        - page
+        - pageSize
+        - total
+      properties:
+        page:
+          type: integer
+          minimum: 1
+        pageSize:
+          type: integer
+          minimum: 1
+          maximum: 100
+        total:
+          type: integer
+          minimum: 0
+          description: Total matching rows across all pages.
+    Institution:
+      type: object
+      required:
+        - id
+        - name
+        - type
+        - countryCode
+        - status
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        type:
+          type: string
+          enum:
+            - MINISTRY
+            - DEPARTMENT
+            - AGENCY
+            - COUNTY
+        countryCode:
+          type: string
+          minLength: 2
+          maxLength: 2
+        status:
+          type: string
+          enum:
+            - ACTIVE
+            - INACTIVE
+    AuditEvent:
+      type: object
+      required:
+        - id
+        - eventType
+        - transactionId
+        - institutionId
+        - occurredAt
+        - summary
+      properties:
+        id:
+          type: string
+        eventType:
+          type: string
+          enum:
+            - TRANSACTION_CREATED
+        transactionId:
+          type: string
+        institutionId:
+          type: string
+        occurredAt:
+          type: string
+          format: date-time
+        summary:
+          type: string
+    ValidationResponse:
+      type: object
+      required:
+        - status
+        - code
+        - message
+        - transactionId
+        - institutionId
+        - fiscalYear
+        - amountMinor
+        - currency
+        - transactionDate
+      properties:
+        status:
+          type: string
+          enum:
+            - VALID
+        code:
+          type: string
+          enum:
+            - VALIDATION_SUCCESS
+        message:
+          type: string
+        transactionId:
+          type: string
+        institutionId:
+          type: string
+        fiscalYear:
+          type: integer
+        amountMinor:
+          type: integer
+        currency:
+          type: string
+        transactionDate:
+          type: string
+          format: date
+    ErrorResponse:
+      type: object
+      required:
+        - error
+      properties:
+        error:
+          type: string

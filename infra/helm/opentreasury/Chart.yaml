@@ -1,0 +1,17 @@
+apiVersion: v2
+name: opentreasury
+description: >-
+  OpenTreasury — open-source public-finance transparency and treasury
+  management. Deploys the core API, ledger gateway (Merkle anchoring), MCP
+  server, web frontend, and optional file connector. PostgreSQL and an OIDC
+  provider (e.g. Keycloak) are external dependencies supplied via values.
+type: application
+version: 0.1.0
+appVersion: "0.1.0"
+home: https://github.com/theetaz/opentreasury
+sources:
+  - https://github.com/theetaz/opentreasury
+keywords:
+  - public-finance
+  - transparency
+  - treasury

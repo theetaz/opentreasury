@@ -1,0 +1,116 @@
+/*
+ * OpenTreasury Design Tokens — canonical source.
+ * Consumed by apps/web (Tailwind/shadcn theme) and the public portal.
+ * Light is the default scope; `.dark` overrides. Chart palette values are
+ * validated (CVD, lightness band, chroma, contrast) — see
+ * docs/design/design-language.md §6 before changing any --chart-* value.
+ */
+
+:root {
+  /* Surfaces & ink */
+  --background: #f7f7f8;        /* page plane */
+  --surface: #ffffff;           /* cards, panels, chart surface */
+  --surface-raised: #ffffff;    /* popovers, menus (elevation via shadow) */
+  --surface-sunken: #f0f0f2;    /* wells, code blocks, table headers */
+  --foreground: #0b0b0e;        /* primary ink */
+  --muted-foreground: #52525b;  /* secondary ink */
+  --faint-foreground: #8b8b94;  /* tertiary: axis labels, placeholders */
+  --border: rgba(9, 9, 11, 0.08);
+  --border-strong: rgba(9, 9, 11, 0.16);
+  --ring: #0d9488;
+
+  /* Brand */
+  --primary: #0d9488;           /* teal — actions, active nav, links */
+  --primary-foreground: #ffffff;
+  --primary-tint: rgba(13, 148, 136, 0.10);  /* active-nav pill, hovers */
+
+  /* Semantic status (reserved — never used as chart series) */
+  --success: #15803d;
+  --success-tint: rgba(21, 128, 61, 0.12);
+  --warning: #b45309;
+  --warning-tint: rgba(180, 83, 9, 0.12);
+  --danger: #b91c1c;
+  --danger-tint: rgba(185, 28, 28, 0.10);
+  --info: #1d4ed8;
+  --info-tint: rgba(29, 78, 216, 0.10);
+
+  /* Chart categorical slots — fixed order, validated; never cycle or reorder */
+  --chart-1: #0d9488;  /* teal (brand) */
+  --chart-2: #2a78d6;  /* blue */
+  --chart-3: #eda100;  /* amber — sub-3:1 on light: needs direct labels */
+  --chart-4: #4a3aa7;  /* violet */
+  --chart-5: #008300;  /* green */
+  --chart-6: #e87ba4;  /* magenta — sub-3:1 on light: needs direct labels */
+  --chart-7: #eb6834;  /* orange */
+
+  /* Chart chrome */
+  --chart-grid: #e7e7ea;        /* hairline gridlines */
+  --chart-axis: #c6c6cc;        /* baseline / axis line */
+  --delta-up: #15803d;          /* positive-change text */
+  --delta-down: #b91c1c;        /* negative-change text */
+
+  /* Typography */
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, "SF Mono", Menlo, monospace;
+
+  /* Shape & elevation */
+  --radius-card: 12px;
+  --radius-control: 8px;
+  --radius-pill: 999px;
+  --shadow-card: 0 1px 2px rgba(9, 9, 11, 0.05);
+  --shadow-raised: 0 4px 16px rgba(9, 9, 11, 0.10);
+
+  /* Layout */
+  --sidebar-width: 248px;
+  --sidebar-width-collapsed: 64px;
+  --topbar-height: 56px;
+  --content-max-width: 1440px;
+}
+
+.dark {
+  --background: #0a0a0c;
+  --surface: #131316;
+  --surface-raised: #1a1a1f;
+  --surface-sunken: #0e0e11;
+  --foreground: #f4f4f5;
+  --muted-foreground: #a1a1aa;
+  --faint-foreground: #6e6e78;
+  --border: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.16);
+  --ring: #14b8a6;
+
+  --primary: #14b8a6;
+  --primary-foreground: #06211d;
+  --primary-tint: rgba(20, 184, 166, 0.12);
+
+  --success: #34c759;
+  --success-tint: rgba(52, 199, 89, 0.14);
+  --warning: #f0a820;
+  --warning-tint: rgba(240, 168, 32, 0.14);
+  --danger: #f2555a;
+  --danger-tint: rgba(242, 85, 90, 0.12);
+  --info: #5390f5;
+  --info-tint: rgba(83, 144, 245, 0.12);
+
+  /* Same hues, stepped for the dark surface — validated as a set */
+  --chart-1: #0da895;
+  --chart-2: #3987e5;
+  --chart-3: #c98500;
+  --chart-4: #9085e9;
+  --chart-5: #279f43;
+  --chart-6: #d55181;
+  --chart-7: #d95926;
+
+  --chart-grid: #26262b;
+  --chart-axis: #3a3a41;
+  --delta-up: #34c759;
+  --delta-down: #f2555a;
+
+  --shadow-card: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-raised: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Financial figures: columns of money align or they lie. */
+.figures-tabular {
+  font-variant-numeric: tabular-nums;
+}

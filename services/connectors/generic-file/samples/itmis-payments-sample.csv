@@ -1,0 +1,8 @@
+reference,payment_date,institution_code,amount,currency
+PAY-2026-1001,2026-07-01,minfin,1250.50,USD
+PAY-2026-1002,2026-07-01,health,890.00,USD
+PAY-2026-1003,2026-07-02,transport,15400.25,USD
+PAY-2026-1004,2026-07-02,minfin,320.00,USD
+PAY-2026-1005,2026-07-03,ghost-ministry,99.00,USD
+PAY-2026-1006,2026-07-03,health,not-a-number,USD
+PAY-2026-1007,2026-07-03,minfin,75.75,USD

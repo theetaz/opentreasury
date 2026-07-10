@@ -1,0 +1,17 @@
+# cryptogen layout for the local single-org Fabric network. All generated
+# material lands in generated/ (gitignored) — nothing sensitive is committed.
+OrdererOrgs:
+  - Name: Orderer
+    Domain: opentreasury.local
+    EnableNodeOUs: true
+    Specs:
+      - Hostname: orderer
+
+PeerOrgs:
+  - Name: Treasury
+    Domain: treasury.opentreasury.local
+    EnableNodeOUs: true
+    Template:
+      Count: 1
+    Users:
+      Count: 1
