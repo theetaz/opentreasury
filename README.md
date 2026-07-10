@@ -117,6 +117,11 @@ Guiding expectations:
 
 Report vulnerabilities privately — see [SECURITY.md](SECURITY.md). Never open public issues for security problems.
 
+## Deploying and Onboarding
+
+- [docs/deployment-guide.md](docs/deployment-guide.md) — production deployment for a government IT team (Helm, external PostgreSQL/OIDC, traceability backends, day-2 operations, hardening checklist).
+- [docs/onboarding-playbook.md](docs/onboarding-playbook.md) — chart-of-accounts mapping workshop, connector profile authoring, demo-data rehearsal, go-live checklist.
+
 ## Roadmap
 
 The product blueprint, current-state audit, and phased implementation plan live in [docs/opentreasury-blueprint.md](docs/opentreasury-blueprint.md).
