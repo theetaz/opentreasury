@@ -93,7 +93,7 @@ func (s *Service) AnchorPending(ctx context.Context) (int, error) {
 	tree := merkle.NewTree(leaves)
 	root := tree.Root()
 
-	backendRef, err := s.backend.Commit(ctx, root)
+	backendRef, err := s.backend.Commit(ctx, root, len(entries))
 	if err != nil {
 		return 0, fmt.Errorf("committing root to backend: %w", err)
 	}

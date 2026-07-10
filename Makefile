@@ -1,4 +1,4 @@
-.PHONY: verify verify-go verify-integration verify-js verify-compose up down db-up db-down db-migrate db-migrate-down db-seed db-reset
+.PHONY: verify verify-go verify-integration verify-js verify-compose up down db-up db-down db-migrate db-migrate-down db-seed db-reset fabric-up fabric-down fabric-purge fabric-gateway
 
 PNPM ?= corepack pnpm
 COMPOSE ?= docker compose -f infra/docker/docker-compose.yaml
@@ -17,6 +17,21 @@ up:
 
 down:
 	$(COMPOSE) down
+
+# Local Hyperledger Fabric network + treasury chaincode (ADR-0004).
+# Requires the main stack's network: run `make up` first.
+fabric-up:
+	infra/fabric/scripts/fabric-up.sh
+
+fabric-down:
+	infra/fabric/scripts/fabric-down.sh
+
+fabric-purge:
+	infra/fabric/scripts/fabric-down.sh --purge
+
+# Repoint the ledger gateway at the Fabric network.
+fabric-gateway:
+	docker compose -f infra/docker/docker-compose.yaml -f infra/docker/docker-compose.fabric.yaml up -d ledger-gateway
 
 db-up:
 	$(COMPOSE) up -d --wait postgres

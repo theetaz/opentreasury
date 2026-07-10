@@ -36,9 +36,27 @@ func main() {
 	}
 	defer func() { _ = db.Close() }()
 
-	// The anchoring backend is pluggable; the transparency log is the default.
-	// A Fabric backend satisfies the same interface (ADR-0004).
-	backend := anchor.NewTransparencyLog(db)
+	// The anchoring backend is pluggable (ADR-0004): the transparency log is
+	// the default; OPENTREASURY_ANCHOR_BACKEND=fabric commits roots to the
+	// treasury chaincode on a Hyperledger Fabric network instead.
+	var backend anchor.Backend = anchor.NewTransparencyLog(db)
+	if os.Getenv("OPENTREASURY_ANCHOR_BACKEND") == "fabric" {
+		fabricBackend, closeFabric, err := anchor.ConnectFabric(anchor.FabricConfig{
+			PeerEndpoint: envOr("OPENTREASURY_FABRIC_PEER_ENDPOINT", "peer0.opentreasury.local:7051"),
+			MSPID:        envOr("OPENTREASURY_FABRIC_MSP_ID", "TreasuryMSP"),
+			CertPath:     os.Getenv("OPENTREASURY_FABRIC_CERT_PATH"),
+			KeyPath:      os.Getenv("OPENTREASURY_FABRIC_KEY_PATH"),
+			TLSCertPath:  os.Getenv("OPENTREASURY_FABRIC_TLS_CERT_PATH"),
+			Channel:      envOr("OPENTREASURY_FABRIC_CHANNEL", "opentreasury"),
+			Chaincode:    envOr("OPENTREASURY_FABRIC_CHAINCODE", "treasury"),
+		})
+		if err != nil {
+			logger.Error("connecting to Fabric", "error", err)
+			os.Exit(1)
+		}
+		defer closeFabric()
+		backend = fabricBackend
+	}
 	service := anchor.NewService(db, backend, logger)
 
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
@@ -72,4 +90,11 @@ func main() {
 		logger.Error("ledger gateway exited", "error", err)
 		os.Exit(1)
 	}
+}
+
+func envOr(key, fallback string) string {
+	if value := os.Getenv(key); value != "" {
+		return value
+	}
+	return fallback
 }

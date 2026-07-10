@@ -17,9 +17,9 @@ import (
 type Backend interface {
 	// Name identifies the backend in anchor receipts.
 	Name() string
-	// Commit appends a Merkle root and returns a backend reference (sequence
-	// or transaction id) proving it was recorded.
-	Commit(ctx context.Context, merkleRoot string) (backendRef string, err error)
+	// Commit appends a Merkle root covering entryCount entries and returns a
+	// backend reference (sequence or transaction id) proving it was recorded.
+	Commit(ctx context.Context, merkleRoot string, entryCount int) (backendRef string, err error)
 }
 
 // TransparencyLog is an append-only, hash-chained log in Postgres: each row
@@ -35,7 +35,7 @@ func NewTransparencyLog(db *sql.DB) *TransparencyLog {
 
 func (*TransparencyLog) Name() string { return "transparency-log" }
 
-func (l *TransparencyLog) Commit(ctx context.Context, merkleRoot string) (string, error) {
+func (l *TransparencyLog) Commit(ctx context.Context, merkleRoot string, _ int) (string, error) {
 	tx, err := l.db.BeginTx(ctx, nil)
 	if err != nil {
 		return "", err
