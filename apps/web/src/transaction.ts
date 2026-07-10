@@ -18,6 +18,7 @@ export function toTransactionPayload(form: TransactionFormState): TreasuryTransa
     amountMinor: Number(form.amountMinor),
     currency: form.currency.trim().toUpperCase(),
     transactionDate: form.transactionDate,
-    description: form.description.trim()
+    description: form.description.trim(),
+    status: "POSTED"
   };
 }

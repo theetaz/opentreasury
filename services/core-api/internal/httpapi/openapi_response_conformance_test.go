@@ -36,6 +36,7 @@ func (conformanceRepository) List(context.Context, treasury.ListTransactionsFilt
 		Currency:        "USD",
 		Description:     "Road maintenance payment",
 		TransactionDate: "2026-06-28",
+		Status:          "POSTED",
 	}}}, nil
 }
 

@@ -46,11 +46,20 @@ type Transaction struct {
 	Currency        string
 	Description     string
 	TransactionDate string
+	Status          string
+}
+
+// ValidTransactionStatuses is the transaction lifecycle enumeration.
+var ValidTransactionStatuses = map[string]struct{}{
+	"PENDING":  {},
+	"POSTED":   {},
+	"REJECTED": {},
 }
 
 type ListTransactionsFilter struct {
 	InstitutionID  string
 	FiscalYear     int
+	Status         string
 	DateFrom       string // inclusive ISO date bound on transaction_date
 	DateTo         string
 	AmountMinorGte int64 // 0 means unset (amounts are strictly positive)

@@ -33,7 +33,8 @@ describe("validateTransaction", () => {
         amountMinor: 125000,
         currency: "USD",
         description: "Road maintenance payment",
-        transactionDate: "2026-06-28"
+        transactionDate: "2026-06-28",
+        status: "POSTED",
       })
     ).resolves.toEqual({
       ok: true,
@@ -47,7 +48,7 @@ describe("validateTransaction", () => {
         fiscalYear: 2026,
         amountMinor: 125000,
         currency: "USD",
-        transactionDate: "2026-06-28"
+        transactionDate: "2026-06-28",
       }
     });
   });

@@ -20,7 +20,8 @@ describe("toTransactionPayload", () => {
       amountMinor: 450075,
       currency: "USD",
       transactionDate: "2026-06-29",
-      description: "Quarterly grant release"
+      description: "Quarterly grant release",
+      status: "POSTED"
     });
   });
 });

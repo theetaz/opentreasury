@@ -85,3 +85,42 @@ func TestListTransactionsEndpointRequiresRepository(t *testing.T) {
 
 	require.Equal(t, http.StatusServiceUnavailable, response.Code)
 }
+
+func TestListTransactionsEndpointFiltersByStatus(t *testing.T) {
+	repository := &recordingTransactionRepository{
+		transactions: []treasury.Transaction{
+			{
+				ID: "txn-2026-0009", InstitutionID: "minfin", FiscalYear: 2026,
+				AmountMinor: 1000, Currency: "USD", Status: "POSTED",
+				TransactionDate: "2026-06-29",
+			},
+		},
+	}
+	request := httptest.NewRequest(http.MethodGet, "/v1/transactions?status=POSTED", nil)
+	response := httptest.NewRecorder()
+
+	NewRouter(WithTransactionRepository(repository)).ServeHTTP(response, request)
+
+	require.Equal(t, http.StatusOK, response.Code)
+	require.Equal(t, "POSTED", repository.filter.Status)
+
+	var body struct {
+		Transactions []struct {
+			Status string `json:"status"`
+		} `json:"transactions"`
+	}
+	require.NoError(t, json.NewDecoder(response.Body).Decode(&body))
+	require.Len(t, body.Transactions, 1)
+	require.Equal(t, "POSTED", body.Transactions[0].Status)
+}
+
+func TestListTransactionsEndpointRejectsInvalidStatus(t *testing.T) {
+	repository := &recordingTransactionRepository{}
+	request := httptest.NewRequest(http.MethodGet, "/v1/transactions?status=bogus", nil)
+	response := httptest.NewRecorder()
+
+	NewRouter(WithTransactionRepository(repository)).ServeHTTP(response, request)
+
+	// Strict validation: reject, never clamp or ignore.
+	require.Equal(t, http.StatusBadRequest, response.Code)
+}
